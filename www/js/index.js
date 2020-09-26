@@ -1,4 +1,4 @@
-// (c) 2014 Don Coleman
+// (c) 2020 Sae Woo Nam
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -12,10 +12,11 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-/* global mainPage, deviceList, refreshButton */
-/* global detailPage, batteryState, batteryStateButton, disconnectButton */
-/* global ble  */
-/* jshint browser: true , devel: true*/
+
+// Based on code written by Don Coleman from his cordova ble central package
+//
+//
+
 'use strict';
 
 var battery = {
@@ -45,12 +46,6 @@ function stringToBytes(string) {
     }
     return array.buffer;
 }
-function concatTypedArrays(a, b) { // a, b TypedArray of same type
-    var c = new(a.constructor)(a.length + b.length);
-    c.set(a, 0);
-    c.set(b, a.length);
-    return c;
-}
 
 var app = {
     initialize: function() {
@@ -76,7 +71,7 @@ var app = {
         // ble.scan([], 5, app.onDiscoverDevice, app.onError);
     },
     onDiscoverDevice: function(device) {
-
+        // TODO add filter on RSSI to eliminate weak signals
         console.log(JSON.stringify(device));
         var listItem = document.createElement('li'),
             html = '<b>' + device.name + '</b><br/>' +
@@ -100,16 +95,6 @@ var app = {
             );
         });
     },
-    sendCmd: function(deviceId, data, success, failure ) {
-        // resultDiv.innerHTML = resultDiv.innerHTML + "sendCmd "+ data  + "<br/>";
-        // resultDiv.scrollTop = resultDiv.scrollHeight;
-        ble.write(
-            deviceId,
-            nisten_ble.serviceUUID,
-            nisten_ble.rwCharacteristic,
-            data, success, failure
-        );
-    },
     sendSpp_promise: function(data) {
         // resultDiv.innerHTML = resultDiv.innerHTML + "sendSpp "+data.byteLength  + "<br/>";
         // resultDiv.scrollTop = resultDiv.scrollHeight;
@@ -122,16 +107,6 @@ var app = {
             );
         });
     },
-    sendSpp: function(deviceId, data, success, failure ) {
-        // resultDiv.innerHTML = resultDiv.innerHTML + "sendSpp "+data.byteLength  + "<br/>";
-        // resultDiv.scrollTop = resultDiv.scrollHeight;
-        ble.writeWithoutResponse(  // ble.write does not work.
-            deviceId,
-            nisten_ble.serviceUUID,
-            nisten_ble.sppCharacteristic,
-            data, success, failure
-        );
-    },
     log: function(msg,newline=true) {
         resultDiv.innerHTML = resultDiv.innerHTML + msg;
         if (newline) {
@@ -141,80 +116,46 @@ var app = {
     },
     connect: function(e) {
         var deviceId = e.target.dataset.deviceId;
-        var onConnect = function() {
-                app.deviceId = deviceId;
-                deviceStateButton.disabled = false;
-                deviceStateButton.dataset.deviceId = deviceId;
-                disconnectButton.dataset.deviceId = deviceId;
-                app.log("connected: "+ deviceId);
-                app.readBattery();
-            };
-        var onError = function() {
-            alert("ERROR: " + reason); // real apps should use notification.alert
-            app.showMainPage();
-        }
         resultDiv.innerHTML = "";
-        deviceStateButton.disabled = true;
+        document.querySelectorAll('.disable').forEach(elem => {
+            elem.disabled = true;
+        });
         app.showDetailPage();
-        ble.connect(deviceId, onConnect, onError);
+        new Promise(function(resolve, reject) {
+            ble.connect(deviceId, resolve, reject);
+        })
+            .then(_ => {
+                app.deviceId = deviceId;
+                document.querySelectorAll('.disable').forEach(elem => {
+                    elem.disabled = false;
+                });
+                // deviceStateButton.disabled = false;
+                app.log("connected: "+ deviceId);
+                app.readBattery(); // do this to prevent the device from disconnecting immediately... firmware bug
+            })
+            .catch(function(reason) {
+                alert("ERROR: " + reason); // real apps should use notification.alert
+                app.showMainPage();
+            });
     },
     readPromise: function(service, characteristic) {
         return new Promise(function(resolve, reject) {
             ble.read(app.deviceId, service, characteristic, resolve, reject);
         });
     },
-    readPromiseBattery: function() {
-        return new Promise(function(resolve, reject) {
-            ble.read(app.deviceId, nisten_ble.serviceUUID, battery.level, resolve, reject);
-        });
-    },
     readBattery: function() {
         app.log("readBattery");
-        // app.readPromiseBattery()
         app.readPromise(nisten_ble.serviceUUID, battery.level)
             .then((data) => app.onReadBatteryLevel(data))
             .catch(app.onError);
-        // ble.read(app.deviceId, nisten_ble.serviceUUID, battery.level, app.onReadBatteryLevel, app.onError);
     },
     readDeviceState: function(event) {
         app.log("readDeviceState");
-        // var deviceId = event.target.dataset.deviceId;
-        // ble.read(deviceId, nisten_ble.serviceUUID, nisten_ble.countsCharacteristic, app.onReadCount, app.onError);
         app.readPromise(nisten_ble.serviceUUID, nisten_ble.countsCharacteristic)
             .then(data => {
                 app.onReadCount(data);
-                // var a = new Uint8Array(data);
-                // app.status = a[3];
-                // var a = new Uint16Array(data);
-                // app.log(a.toString());
-                // app.counts = a[0];
-                // app.log('counts: '+a[0]);
             })
             .catch(app.noError);
-        // app.readPromise(nisten_ble.serviceUUID, nisten_ble.countsCharacteristic)
-        //     .then(data => app.onReadCounts(data))
-        //     .catch(app.noError);
-    },
-    fetchState_orig: function(event) {
-        var onReadCount = function(data) {
-            var a = new Uint8Array(data);
-            app.status = a[3];
-            var a = new Uint16Array(data);
-            app.log(a.toString());
-            app.counts = a[0];
-            app.log('counts: '+a[0]);
-            app.log("fetchState start notify");
-            ble.startNotification(app.deviceId, nisten_ble.serviceUUID, nisten_ble.sppCharacteristic, app.handlef, app.onError);
-            app.log("fetchState send cmd f");
-            var data = stringToBytes("f");
-            app.fetch_idx = 0;
-            app.received_length = 0;
-            // app.sendCmd(app.deviceId, data, app.sendIdx, app.onError);
-            app.sendCmd_promise(data)
-                .then(app.send_idx_promise())
-                .catch(app.onError);
-        };
-        ble.read(app.deviceId, nisten_ble.serviceUUID, nisten_ble.countsCharacteristic, onReadCount, app.onError);
     },
     send_idx_promise: function() {
         let data = new Uint32Array(1);
@@ -232,28 +173,12 @@ var app = {
         app.readPromise(nisten_ble.serviceUUID, nisten_ble.countsCharacteristic)
             .then(data => {
                 app.onReadCount(data);
-
-                // var a = new Uint8Array(data);
-                // app.status = a[3];
-                // var a = new Uint16Array(data);
-                // app.log(a.toString());
-                // app.counts = a[0];
-                // app.log('counts: '+a[0]);
                 app.log("fetchState send cmd f");
                 var data = stringToBytes("f");
                 app.sendCmd_promise(data);
-                // app.sendCmd(app.deviceId, data, app.sendIdx, app.onError);
             })
             .then(app.send_idx_promise())
             .catch(app.onError);
-    },
-    sendIdx: function() {
-        var success = function () {app.log('sent idx ' + app.fetch_idx); };
-
-        let data = new Uint32Array(1);
-        data[0] = app.fetch_idx;
-        // app.log('Send fetch_idx: ' + app.fetch_idx + ' ' + data[0]);
-        app.sendSpp(app.deviceId, data.buffer, success, app.onError);
     },
     handlef: function(data) {
         // app.log('handlef');
@@ -309,8 +234,8 @@ var app = {
         };
         var deviceId = event.target.dataset.deviceId;
         resultDiv.innerHTML = "";
-        // ble.disconnect(deviceId, app.showMainPage, app.onError);
-        ble.disconnect(deviceId, app.showMainPage, onError);
+        // ble.disconnect(app.deviceId, app.showMainPage, app.onError);
+        ble.disconnect(app.deviceId, app.showMainPage, onError);
     },
     showMainPage: function() {
         mainPage.hidden = false;

@@ -178,8 +178,22 @@ var app = {
     },
     readDeviceState: function(event) {
         app.log("readDeviceState");
-        var deviceId = event.target.dataset.deviceId;
-        ble.read(deviceId, nisten_ble.serviceUUID, nisten_ble.countsCharacteristic, app.onReadCount, app.onError);
+        // var deviceId = event.target.dataset.deviceId;
+        // ble.read(deviceId, nisten_ble.serviceUUID, nisten_ble.countsCharacteristic, app.onReadCount, app.onError);
+        app.readPromise(nisten_ble.serviceUUID, nisten_ble.countsCharacteristic)
+            .then(data => {
+                app.onReadCount(data);
+                // var a = new Uint8Array(data);
+                // app.status = a[3];
+                // var a = new Uint16Array(data);
+                // app.log(a.toString());
+                // app.counts = a[0];
+                // app.log('counts: '+a[0]);
+            })
+            .catch(app.noError);
+        // app.readPromise(nisten_ble.serviceUUID, nisten_ble.countsCharacteristic)
+        //     .then(data => app.onReadCounts(data))
+        //     .catch(app.noError);
     },
     fetchState_orig: function(event) {
         var onReadCount = function(data) {
@@ -217,12 +231,14 @@ var app = {
 
         app.readPromise(nisten_ble.serviceUUID, nisten_ble.countsCharacteristic)
             .then(data => {
-                var a = new Uint8Array(data);
-                app.status = a[3];
-                var a = new Uint16Array(data);
-                app.log(a.toString());
-                app.counts = a[0];
-                app.log('counts: '+a[0]);
+                app.onReadCount(data);
+
+                // var a = new Uint8Array(data);
+                // app.status = a[3];
+                // var a = new Uint16Array(data);
+                // app.log(a.toString());
+                // app.counts = a[0];
+                // app.log('counts: '+a[0]);
                 app.log("fetchState send cmd f");
                 var data = stringToBytes("f");
                 app.sendCmd_promise(data);

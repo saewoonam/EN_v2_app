@@ -10,16 +10,18 @@
     </head>
     <body>
         <div class="app">
-            <p style="text-align:center; padding-top: 20px;">Choose a peripheral with a battery service</p>
+            <h2> NIST bluetooth ultrasound </h2>
             <div id="mainPage">
                 <ul id="deviceList">
                 </ul>
                 <button id="refreshButton">Refresh</button>
             </div>
             <div id="detailPage">
-                <div id="batteryState"></div>
-                <button id="batteryStateButton">Read Battery State</button>
+                <div id="deviceState"></div>
+                <button id="deviceStateButton">get info</button>
+                <button id="fetchButton">fetch</button>
                 <button id="disconnectButton">Disconnect</button>
+                <div id="resultDiv"></div>
             </div>
         </div>
         <script type="text/javascript" src="cordova.js"></script>

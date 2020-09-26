@@ -17,9 +17,10 @@ This is a mobile app that is written with the cordova package to communicate via
         cordova plugin add git+https://github.com/rajeshpandalss/cordova-plugin-ble-central.git
         cordova run ios
 
-Note: Sometimes Xcode can't deploy from the command line. If that happens, open NIST-EN-CAL.xcworkspace and deploy to your phone using Xcode.
+Note: Sometimes Xcode can't deploy from the command line. If that happens, open NIST-EN-CAL.xcworkspace and deploy to your phone using Xcode.  This can be fixed by opening the workspace and fixing the developer credentials.   After fixing the credentials it should compile in Xcode or from the command line using the cordova commands
 
-    open platforms/ios/NIST-EN-CAL.xcworkspace
+    open platforms/ios/v2.xcworkspace
+
 
 ## To deploy to app store
 -  Remember to build for Generic iOS device

@@ -57,6 +57,8 @@ var app = {
         refreshButton.addEventListener('touchstart', this.refreshDeviceList, false);
         deviceStateButton.addEventListener('touchstart', this.readDeviceState, false);
         fetchButton.addEventListener('touchstart', this.fetchState, false);
+        A.addEventListener('touchstart', this.AButton, false);
+        O.addEventListener('touchstart', this.OButton, false);
         disconnectButton.addEventListener('touchstart', this.disconnect, false);
         deviceList.addEventListener('touchstart', this.connect, false); // assume not scrolling
     },
@@ -84,8 +86,7 @@ var app = {
 
     },
     sendCmd_promise: function(data) {
-        // resultDiv.innerHTML = resultDiv.innerHTML + "sendCmd "+ data  + "<br/>";
-        // resultDiv.scrollTop = resultDiv.scrollHeight;
+        app.log('sendCmd_promise: '+data);
         var cmd = stringToBytes(data);
 
         return new Promise(function(resolve, reject) {
@@ -159,6 +160,12 @@ var app = {
             .then(data => {
                 app.onReadCount(data);
             })
+            .then(_ => {
+                if (app.status & 4) {
+                    app.log("time needs to be set");
+                    app.setTime();
+                }
+            })
             .catch(app.noError);
     },
     send_idx_promise: function() {
@@ -180,12 +187,18 @@ var app = {
                 app.log("fetchState send cmd f");
                 app.sendCmd_promise("f");
             })
-            .then(app.send_idx_promise())
+            // .then(_ => { // this delay is needed on android 
+            //     app.delay(50);
+            // })
+            // .then(_ => {
+            //     app.send_idx_promise();
+            // })
+            .then(_ => {
+                setTimeout(function() {app.send_idx_promise();}, 75);
+            })
             .catch(app.onError);
     },
     handlef: function(data) {
-        // app.log('handlef');
-        // app.log('handlef data len: '+data.byteLength + ', ' + app.received_length + ', ' + (app.counts<<5));
         var array32 = new Uint32Array(data.slice(0,4));
         app.log('handlef info: '+array32[0]+ ', ', false);
         if (array32[0] == app.fetch_idx) {
@@ -195,14 +208,13 @@ var app = {
                 app.blob = new Uint8Array(app.counts<<5);
             }
             app.blob.set(new Uint8Array(data.slice(4,)), app.received_length);
-            // console.log(new Uint8Array(data.slice(4, )))
-            // console.log(app.blob)
         }
         app.received_length +=  data.byteLength - 4;
         app.log(' '+data.byteLength + ', ' + app.received_length + ', ' + (app.counts<<5));
         if (app.received_length==(app.counts<<5)) {
             ble.stopNotification(app.deviceId, nisten_ble.serviceUUID, nisten_ble.sppCharacteristic, app.donef, app.onError);
-            console.log('blob.length '+app.blob.length);
+            // console.log(app.blob)
+            // console.log('blob.length '+app.blob.length);
             app.log('blob.length '+app.blob.length);
         } else {
             app.fetch_idx = array32[0] + 1;
@@ -213,6 +225,146 @@ var app = {
     donef: function(event) {
         app.log('done f');
     },
+    sendCmd: function(deviceId, data, success, failure ) {
+        // resultDiv.innerHTML = resultDiv.innerHTML + "sendCmd "+ data  + "<br/>";
+        // resultDiv.scrollTop = resultDiv.scrollHeight;
+        app.log("sendCmd "+data);
+        ble.write(
+            deviceId,
+            nisten_ble.serviceUUID,
+            nisten_ble.rwCharacteristic,
+            data, success, failure
+        );
+    },
+    sendSpp: function(deviceId, data, success, failure ) {
+        // resultDiv.innerHTML = resultDiv.innerHTML + "sendSpp "+data.byteLength  + "<br/>";
+        // resultDiv.scrollTop = resultDiv.scrollHeight;
+        app.log("sendSpp "+data.byteLength);
+        ble.writeWithoutResponse(  // ble.write does not work.
+            deviceId,
+            nisten_ble.serviceUUID,
+            nisten_ble.sppCharacteristic,
+            data, success, failure
+        );
+    },
+    delay: function(delay_ms) {
+        new Promise((resolve, reject) => {
+
+            let wait = setTimeout(() => {
+                clearTimeout(wait);
+                app.log('delay');
+                resolve("done waiting");
+            }, delay_ms)
+        });
+    },
+    setTime_orig: function() {
+        let times = new Uint32Array(3);
+        let count = 0;
+        let epoch_time1 = (new Date()).getTime();
+        let epoch_time2;
+        var finishedO = function() {
+            app.log("Finished setting time");
+        }
+        var sendO = function() {
+            var data = stringToBytes("O");
+            // setTimeout(function() {app.sendCmd(app.deviceId, data, finishedO, app.onErr);}, 100);
+            app.sendCmd(app.deviceId, data, finishedO, app.onError);
+        };
+        var doneA_orig = function() {
+            app.sendSpp(app.deviceId, times.buffer, sendO, app.onErr);
+        };
+        var doneA = function() {
+            setTimeout(function() {app.sendSpp(app.deviceId, times.buffer, sendO, app.onErr);}, 75);
+        };
+        var success = function() {
+            // resultDiv.innerHTML = resultDiv.innerHTML + "Sent cmd A: <br/>";
+            // resultDiv.scrollTop = resultDiv.scrollHeight;
+        };
+        var readA = function(buffer) {
+            var data = new Uint32Array(buffer);
+            times[count+1] = data[0]
+            // resultDiv.innerHTML = resultDiv.innerHTML + "readA " + times[count] + "<br/>";
+            // resultDiv.scrollTop = resultDiv.scrollHeight;
+            count++;
+            if (count==2) {
+                epoch_time2 = (new Date()).getTime();
+
+                let mean = parseInt((epoch_time1 + epoch_time2) / 2);
+                let offset = mean % 1000;
+                mean = parseInt(mean / 1000);
+                times[0] = mean;
+                times[1] -= offset;
+
+                app.log("times: "+times);
+                app.times = times;
+                ble.stopNotification(app.deviceId, nisten_ble.serviceUUID,
+                    nisten_ble.sppCharacteristic, doneA, app.onError);
+            }
+        }
+        // resultDiv.innerHTML = resultDiv.innerHTML + "start to get uptime" + "<br/>";
+        // resultDiv.scrollTop = resultDiv.scrollHeight;
+        ble.startNotification(app.deviceId, nisten_ble.serviceUUID, nisten_ble.sppCharacteristic, readA, app.onError);
+        var data = stringToBytes("A");
+        app.sendCmd(app.deviceId, data, success, app.onError);
+    },
+    OButton: function() {
+        app.doneA()
+    },
+    AButton: function() {
+        app.log("not implemented");
+    },
+    doneA: function() {
+        app.log("got times: "+app.times+" length:"+app.times.byteLength);
+        // app.sendSpp_promise(times.buffer)
+        //     .then(app.log("try to send times buffer"))
+        //     .catch(app.onErr);
+        //
+        //  Tied to add a delay promise... delay via promise is not working
+        //
+        // app.delay(1000)
+        //     .then((res) => app.log(res))
+        //     .then(app.sendSpp_promise(app.times.buffer))
+        //     .then(app.sendCmd_promise("O"))
+        //     .then(app.log("finished trying to set time"))
+        //     .catch(app.onErr);
+        setTimeout(function() {
+            app.sendSpp_promise(app.times.buffer)
+                .then(app.sendCmd_promise("O"))
+                .then(app.log("finished trying to set time"))
+                .catch(app.onErr);
+        }, 75);
+    },
+
+    setTime: function() {
+        app.times = new Uint32Array(3);
+        let count = 0;
+        let epoch_time1 = (new Date()).getTime();
+        let epoch_time2;
+
+        var readA = function(buffer) {
+            var data = new Uint32Array(buffer);
+            app.times[count+1] = data[0]
+            count++;
+            if (count==2) {
+                epoch_time2 = (new Date()).getTime();
+
+                let mean = parseInt((epoch_time1 + epoch_time2) / 2);
+                let offset = mean % 1000;
+                mean = parseInt(mean / 1000);
+                app.times[0] = mean;
+                app.times[1] -= offset;
+                app.log("stopping readA");
+                app.log("got times: "+app.times+" length:"+app.times.byteLength);
+
+                ble.stopNotification(app.deviceId, nisten_ble.serviceUUID,
+                    nisten_ble.sppCharacteristic, app.doneA, app.onError);
+            }
+        }
+        ble.startNotification(app.deviceId, nisten_ble.serviceUUID, nisten_ble.sppCharacteristic, readA, app.onError);
+        app.sendCmd_promise("A")
+            .catch(app.onError);
+    },
+
     onReadBatteryLevel: function(data) {
         var message;
         var a = new Uint8Array(data);

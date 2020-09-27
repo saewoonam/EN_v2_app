@@ -43,6 +43,10 @@ ul {
     list-style: none;
     border-bottom: 1px solid #d3d3d3;    
     text-align: left;
+    overflow-y: auto;
+    overflow: scroll;
+    /* overflow-x: hidden; */
+    /* border: 1px solid #ccc; */
 }
 
 li {

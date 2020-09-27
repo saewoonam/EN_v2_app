@@ -66,9 +66,9 @@ var app = {
     refreshDeviceList: function() {
         deviceList.innerHTML = ''; // empties the list
         // scan for all devices
-        ble.scan(['7b183224-9168-443e-a927-7aeea07e8105'], 5, app.onDiscoverDevice, app.onError);
+        // ble.scan(['7b183224-9168-443e-a927-7aeea07e8105'], 5, app.onDiscoverDevice, app.onError);
         // ble.scan([nisten_ble.shortUUID], 5, app.onDiscoverDevice, app.onError);
-        // ble.scan([], 5, app.onDiscoverDevice, app.onError);
+        ble.scan([], 5, app.onDiscoverDevice, app.onError);
     },
     onDiscoverDevice: function(device) {
         // TODO add filter on RSSI to eliminate weak signals
@@ -86,12 +86,14 @@ var app = {
     sendCmd_promise: function(data) {
         // resultDiv.innerHTML = resultDiv.innerHTML + "sendCmd "+ data  + "<br/>";
         // resultDiv.scrollTop = resultDiv.scrollHeight;
+        var cmd = stringToBytes(data);
+
         return new Promise(function(resolve, reject) {
             ble.write(
                 app.deviceId,
                 nisten_ble.serviceUUID,
                 nisten_ble.rwCharacteristic,
-                data, resolve, reject
+                cmd, resolve, reject
             );
         });
     },
@@ -116,9 +118,10 @@ var app = {
     },
     connect: function(e) {
         var deviceId = e.target.dataset.deviceId;
-        resultDiv.innerHTML = "";
+        resultDiv.innerHTML = "Trying to connect...";
         document.querySelectorAll('.disable').forEach(elem => {
             elem.disabled = true;
+            // elem.style.visibility = 'visible';
         });
         app.showDetailPage();
         new Promise(function(resolve, reject) {
@@ -128,6 +131,7 @@ var app = {
                 app.deviceId = deviceId;
                 document.querySelectorAll('.disable').forEach(elem => {
                     elem.disabled = false;
+                    // elem.style.visibiliity = 'hidden';
                 });
                 // deviceStateButton.disabled = false;
                 app.log("connected: "+ deviceId);
@@ -174,8 +178,7 @@ var app = {
             .then(data => {
                 app.onReadCount(data);
                 app.log("fetchState send cmd f");
-                var data = stringToBytes("f");
-                app.sendCmd_promise(data);
+                app.sendCmd_promise("f");
             })
             .then(app.send_idx_promise())
             .catch(app.onError);
@@ -184,19 +187,19 @@ var app = {
         // app.log('handlef');
         // app.log('handlef data len: '+data.byteLength + ', ' + app.received_length + ', ' + (app.counts<<5));
         var array32 = new Uint32Array(data.slice(0,4));
-        app.log('got idx: '+array32[0]);
+        app.log('handlef info: '+array32[0]+ ', ', false);
         if (array32[0] == app.fetch_idx) {
             // should check packet_size... Leave for later
             if (array32[0] == 0) { // no concat if first packet
-                app.log('first packet');
+                // app.log('first packet');
                 app.blob = new Uint8Array(app.counts<<5);
             }
             app.blob.set(new Uint8Array(data.slice(4,)), app.received_length);
-            console.log(new Uint8Array(data.slice(4, )))
+            // console.log(new Uint8Array(data.slice(4, )))
             // console.log(app.blob)
         }
         app.received_length +=  data.byteLength - 4;
-        app.log('handlef data len: '+data.byteLength + ', ' + app.received_length + ', ' + (app.counts<<5));
+        app.log(' '+data.byteLength + ', ' + app.received_length + ', ' + (app.counts<<5));
         if (app.received_length==(app.counts<<5)) {
             ble.stopNotification(app.deviceId, nisten_ble.serviceUUID, nisten_ble.sppCharacteristic, app.donef, app.onError);
             console.log('blob.length '+app.blob.length);
@@ -205,7 +208,6 @@ var app = {
             app.fetch_idx = array32[0] + 1;
             app.send_idx_promise()
                 .catch(app.onError);
-            // app.sendIdx();
         }
     },
     donef: function(event) {

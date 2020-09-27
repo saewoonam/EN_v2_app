@@ -22,6 +22,8 @@ Note: Sometimes Xcode can't deploy from the command line. If that happens, open 
     open platforms/ios/v2.xcworkspace
 
 
+## made icons using:
+https://appicon.co
 ## To deploy to app store
 -  Remember to build for Generic iOS device
 -  Select Build Archive, this is greyed out if a specific device has been selected

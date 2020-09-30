@@ -70,20 +70,33 @@ var app = {
         // scan for all devices
         // ble.scan(['7b183224-9168-443e-a927-7aeea07e8105'], 5, app.onDiscoverDevice, app.onError);
         // ble.scan([nisten_ble.shortUUID], 5, app.onDiscoverDevice, app.onError);
+        // ble.scan(['fd6f'], 5, app.onDiscoverDevice, app.onError);
+        // ble.scan(['fd6f'], 5, app.onDiscoverDevice, app.onError);
         ble.scan([], 5, app.onDiscoverDevice, app.onError);
     },
     onDiscoverDevice: function(device) {
         // TODO add filter on RSSI to eliminate weak signals
-        console.log(JSON.stringify(device));
-        var listItem = document.createElement('li'),
-            html = '<b>' + device.name + '</b><br/>' +
-                'RSSI: ' + device.rssi + '&nbsp;|&nbsp;' +
-                device.id;
+        console.log(JSON.stringify(device.advertising));
+        // console.log(device.name, device.advertising.slice(3,3+4));
 
-        listItem.dataset.deviceId = device.id;  // TODO
-        listItem.innerHTML = html;
-        deviceList.appendChild(listItem);
+        // let service = new Uint8Array([3, 2, 111, 253]);
+        // let number = new Uint32Array(service.buffer);
+        // let number2 = new Uint32Array(device.advertising.slice(3,7));
+        // console.log(number[0], number2[0]);
+        //
+        // if ((number[0] == number2[0]) && (device.rssi>-80)) {
+        // if (number[0] == number2[0]) {
+        if (device.rssi > -80) {
+            console.log(JSON.stringify(device));
+            var listItem = document.createElement('li'),
+                    html = '<b>' + device.name + '</b><br/>' +
+                    'RSSI: ' + device.rssi + '&nbsp;|&nbsp;' +
+                    device.id;
 
+            listItem.dataset.deviceId = device.id;  // TODO
+            listItem.innerHTML = html;
+            deviceList.appendChild(listItem);
+        }
     },
     sendCmd_promise: function(data) {
         app.log('sendCmd_promise: '+data);

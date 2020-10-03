@@ -11,23 +11,10 @@
         <title>Bluetooth device</title>
     </head>
     <body>
-        <div class="app">
-            <h2> NIST bluetooth ultrasound </h2>
-            <div id="mainPage">
-                <ul id="deviceList">
-                </ul>
-                <button id="refreshButton">Refresh</button>
-            </div>
-            <div id="detailPage">
-                <div id="deviceState"></div>
-                <button id="deviceStateButton" class="disable">get info</button>
-                <button id="fetchButton" class="disable">fetch</button>
-                <button id="A" class="disable debug">A</button>
-                <button id="O" class="disable debug">O</button>
-                <button id="disconnectButton">Disconnect</button>
-            </div>
-            <div id="resultDiv"></div>
+        <div id="app" class="app">
+          Loading...
         </div>
+
         <script>
             function getOS() {
                 var userAgent = window.navigator.userAgent,

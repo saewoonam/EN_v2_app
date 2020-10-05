@@ -237,6 +237,9 @@ var app = {
     },
     donef: function(event) {
         app.log('done f');
+        var data = [];
+        data = raw2array(app.blob.buffer);
+        CreateTableFromJSON(data);
     },
     sendCmd: function(deviceId, data, success, failure ) {
         // resultDiv.innerHTML = resultDiv.innerHTML + "sendCmd "+ data  + "<br/>";
@@ -399,7 +402,7 @@ var app = {
             app.showMainPage();
             app.refreshDeviceList();
         };
-        var deviceId = event.target.dataset.deviceId;
+        // var deviceId = event.target.dataset.deviceId;
         resultDiv.innerHTML = "";
         // ble.disconnect(app.deviceId, app.showMainPage, app.onError);
         ble.disconnect(app.deviceId, app.showMainPage, onError);
@@ -407,8 +410,10 @@ var app = {
     showMainPage: function() {
         mainPage.hidden = false;
         detailPage.hidden = true;
+        tab_disconnect.hidden = true;
     },
     showDetailPage: function() {
+        tab_disconnect.hidden = false;
         mainPage.hidden = true;
         detailPage.hidden = false;
     },

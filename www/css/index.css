@@ -36,11 +36,11 @@ button {
 }
 
 #detailPage div {
-    margin: 20px;
+    /* margin: 20px; */
 }
 
 #detailPage button {
-    margin-top: 40px;
+    /* margin-top: 40px; */
     font-size: 0.6em; /* undo 2em from parent */
 }
 

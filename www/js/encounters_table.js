@@ -97,7 +97,6 @@ function raw2array(raw) {
                 row.sound *= 192 / 19e6 * 343;
                 row.sound = row.sound.toFixed(2);
             }
-            app.log(row);
             // row.raw_sound=sound; 
             let rssi = new Int8Array(raw.slice(offset + 12 + 8, offset + 32))
             row.rssi = (

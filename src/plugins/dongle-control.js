@@ -110,7 +110,8 @@ function Controller(){
     )
 
     let data = new Uint16Array(res)
-    return data[0]
+    // return data[0]
+    return data
   }
 
   async function getBatteryLevel(){

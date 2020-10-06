@@ -207,15 +207,15 @@ function Controller(){
     value[0] = Math.round((new Date()).getTime() / 1000)
     value[1] = uptime[0]
     value[2] = uptime[1]
-
-    await sendCommand('setClock')
-
+    // send clock info before set clock command
     await ble.withPromises.writeWithoutResponse(
       connection.id,
       SERVICE_UUID,
       CHARACTERISTICS.data,
       (new Uint8Array(value.buffer)).buffer
     )
+    //  tell device to uses info in data buffer to set clock
+    await sendCommand('setClock')
   }
 
   async function fetchData(opts = { interrupt: false, onProgress }){

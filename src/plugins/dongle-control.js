@@ -204,8 +204,9 @@ function Controller(){
 
     let uptime = await sendCommand('getUptime')
     let value = new Uint32Array(3)
-
-    value[0] = Math.round((new Date()).getTime() / 1000)
+    console.log("uptime: ", uptime);
+    // value[0] = Math.round((new Date()).getTime() / 1000)
+    value[0] = parseInt((new Date()).getTime() / 1000)
     value[1] = uptime[0]
     value[2] = uptime[1]
     // send clock info before set clock command
@@ -213,7 +214,8 @@ function Controller(){
       connection.id,
       SERVICE_UUID,
       CHARACTERISTICS.data,
-      (new Uint8Array(value.buffer)).buffer
+      // (new Uint8Array(value.buffer)).buffer
+      value.buffer
     )
     //  tell device to uses info in data buffer to set clock
     await sendCommand('setClock')

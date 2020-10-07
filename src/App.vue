@@ -15,7 +15,7 @@
       <p>Uptime: {{ uptimeText }}</p>
       <p>Battery level: {{ batteryLevel }}</p>
       <p>Memory Blocks Used: {{ blockCount }}</p>
-      <p>Status: {{ state }}</p>
+      <p>Status: {{ status }}</p>
       <button @click="fetchState">Refresh</button>
       <button @click="toggleFlash">{{ flashWrite ? 'Stop Recording' : 'Start Recording' }}</button>
       <button @click="fetchData">Fetch Data</button>
@@ -57,7 +57,7 @@ export default {
     uptime: [],
     batteryLevel: 0,
     blockCount: 0,
-    state: 0,
+    status: 0,
     flashWrite: 0,
     recordedPrimary: false,
     progress: 0
@@ -126,7 +126,7 @@ export default {
     getMemoryUsage(){
       return this.$dongle.getMemoryUsage().then(usage => {
         this.blockCount = usage[0]
-        this.state = usage[1] >> 8
+        this.status = usage[1] >> 8
       })
       .catch(err => this.onError(err))
     },

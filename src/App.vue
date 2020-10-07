@@ -111,6 +111,7 @@ export default {
     },
 
     async connect(id){
+      this.connected = true
       await this.$dongle.connect(id)
     },
 

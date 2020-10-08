@@ -1,15 +1,47 @@
 <template>
-  <div>
-    <h2> NIST bluetooth ultrasound </h2>
-    <div v-if="!connected">
-        <ul>
-          <li v-for="d in devices" :key="d.id" @click="connect(d.id)">
-            <b>{{ d.name }}</b><br/>
-            RSSI: {{ d.rssi }}&nbsp;|&nbsp;{{ d.id }}
-          </li>
-        </ul>
-        <button @click="refreshDeviceList">Refresh</button>
-    </div>
+<div class="app">
+  <b-navbar :fixed-top="true">
+    <template slot="brand">
+      <b-navbar-item>
+        NIST Bluetooth Ultrasound
+      </b-navbar-item>
+    </template>
+    <template slot="start">
+      <b-navbar-item href="#">
+        Home
+      </b-navbar-item>
+      <b-navbar-item href="#">
+        Documentation
+      </b-navbar-item>
+      <b-navbar-dropdown label="Info">
+        <b-navbar-item href="#">
+          About
+        </b-navbar-item>
+        <b-navbar-item href="#">
+          Contact
+        </b-navbar-item>
+      </b-navbar-dropdown>
+    </template>
+
+    <template slot="end">
+      <b-navbar-item tag="div">
+        <div class="buttons">
+          <a class="button is-primary">
+            <strong>Sign up</strong>
+          </a>
+          <a class="button is-light">
+            Log in
+          </a>
+        </div>
+      </b-navbar-item>
+    </template>
+  </b-navbar>
+
+  <div class="container">
+    <b-loading :is-full-page="false" :active="loading"></b-loading>
+
+    <DeviceList v-if="!connected" @connect="connect" @error="onError"/>
+
     <div v-if="connected">
       <p>Connected to {{ deviceName }}</p>
       <p>Uptime: {{ uptimeText }}</p>
@@ -26,12 +58,13 @@
     </div>
     <div id="resultDiv"></div> -->
   </div>
+</div>
 </template>
 
 <script>
-import { battery, nisten_ble } from './config/device.conf'
 import { bytesToData, bytesToCsv, parse_binary } from './tools/data-parse'
 import { InterruptException } from './plugins/dongle-control'
+import DeviceList from './components/DeviceList'
 
 function msToTime(s) {
   let ms = s % 1000
@@ -49,10 +82,11 @@ export default {
   props: {
   },
   components: {
+    DeviceList
   },
   data: () => ({
-    devices: [],
     connected: false,
+    loading: false,
     deviceName: '',
     uptime: [],
     batteryLevel: 0,
@@ -72,13 +106,14 @@ export default {
   },
 
   mounted(){
-    this.refreshDeviceList()
 
     const connected = async () => {
       this.connected = true
       this.deviceName = this.$dongle.getDeviceName()
       await this.fetchState()
       await this.$dongle.syncClock()
+
+      this.loading = false
     }
     const disconnected = () => {
       this.connected = false
@@ -96,22 +131,9 @@ export default {
   },
 
   methods: {
-    refreshDeviceList() {
-      this.devices = []
-      // scan for all devices
-      // ble.scan(['7b183224-9168-443e-a927-7aeea07e8105'], 5, app.onDiscoverDevice, app.onError);
-      // ble.scan([nisten_ble.shortUUID], 5, app.onDiscoverDevice, app.onError);
-      // ble.scan(['fd6f'], 5, app.onDiscoverDevice, app.onError);
-      // ble.scan(['fd6f'], 5, app.onDiscoverDevice, app.onError);
-      const discover = device => {
-        if (device.rssi <= -80){ return }
-        this.devices.push(device)
-      }
-      ble.scan([], 5, discover, this.onError.bind(this));
-    },
 
     async connect(id){
-      this.connected = true
+      this.loading = true
       await this.$dongle.connect(id)
     },
 

@@ -8,6 +8,9 @@ module.exports = {
     path: path.resolve(__dirname, 'www'),
     filename: 'index.bundle.js',
   },
+  resolve: {
+    extensions: ['.vue', '.js']
+  },
   devtool: 'inline-source-map',
   module: {
     rules: [
@@ -24,7 +27,11 @@ module.exports = {
       {
         test: /\.vue$/,
         loader: 'vue-loader'
-      }
+      },
+      {
+        test: /\.css$/i,
+        use: ['style-loader', 'css-loader'],
+      },
     ]
   },
   plugins: [

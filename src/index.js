@@ -23,6 +23,8 @@ import dongleControl from './plugins/dongle-control'
 // import router from '@/router'
 import Buefy from 'buefy'
 import 'buefy/dist/buefy.css'
+import '@mdi/font/css/materialdesignicons.css'
+import './styles/main.scss'
 
 Vue.use(Buefy)
 

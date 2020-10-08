@@ -1,24 +1,39 @@
 <template>
 <div class="device-list">
-  <div class="device-item field is-grouped is-grouped-centered is-marginless">
-    <p class="control">
-      <button class="button" @click="refreshDeviceList">Refresh</button>
-    </p>
-  </div>
-
-  <div class="device-item clickable" v-for="d in devices" :key="d.id" @click="$emit('connect', d.id)">
-    <div class="name heading is-size-6">
-      {{ d.name || '(Anonymous)' }}
-    </div>
-    <div class="details field is-grouped is-grouped-multiline">
-      <div class="control">
-        <span class="tag is-dark">{{ d.id }}</span>
+  <nav class="level is-mobile">
+    <div class="level-left">
+      <div class="level-item">
+        <div class="heading is-size-6">
+          NIST Bluetooth Ultrasound
+        </div>
       </div>
+    </div>
+    <div class="level-right">
+      <div class="level-item has-text-right">
+        <b-field grouped position="is-right">
+          <div class="control">
+            <b-button @click="refreshDeviceList" type="is-rounded is-inverted" icon-right="reload"></b-button>
+          </div>
+        </b-field>
+      </div>
+    </div>
+  </nav>
 
-      <div class="control">
-        <div class="tags has-addons">
-          <span class="tag is-dark">RSSI</span>
-          <span class="tag is-success">{{ d.rssi }}</span>
+  <div class="container">
+    <div class="device-item clickable" v-for="d in devices" :key="d.id" @click="$emit('connect', d.id)">
+      <div class="name heading is-size-6">
+        {{ d.name || '(Anonymous)' }}
+      </div>
+      <div class="details field is-grouped is-grouped-multiline">
+        <div class="control">
+          <span class="tag is-dark">{{ d.id }}</span>
+        </div>
+
+        <div class="control">
+          <div class="tags has-addons">
+            <span class="tag is-dark">RSSI</span>
+            <span class="tag is-success">{{ d.rssi }}</span>
+          </div>
         </div>
       </div>
     </div>
@@ -26,7 +41,16 @@
 </div>
 </template>
 
-<style scoped>
+<style lang="scss" scoped>
+nav.level {
+  box-shadow: 0 2px 0 0 whitesmoke;
+  padding: 0.75rem;
+  margin: 0;
+
+  .heading {
+    margin: 0;
+  }
+}
 .device-item {
   padding: 1rem;
   border-bottom: 1px solid #d6d6d6;

@@ -64,10 +64,11 @@ export default {
     onError(e){
       this.$buefy.snackbar.open({
         message: 'Error: ' + e.message,
-        type: 'is-error',
+        type: 'is-danger',
         position: 'is-top'
       })
       console.error(e)
+      this.busy = false
     }
   }
 }

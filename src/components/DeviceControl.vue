@@ -294,7 +294,7 @@ export default {
     },
 
     onError(e){
-      this.feedback('Error: ' + e.message, 'is-error')
+      this.feedback('Error: ' + e.message, 'is-danger')
       this.$emit('error', e)
       this.busy = false
     }

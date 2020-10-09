@@ -1,8 +1,23 @@
 <template>
 <div class="app">
   <b-loading :is-full-page="false" :active="busy"></b-loading>
-  <DeviceList v-if="!connected" @connect="connect" @error="onError"/>
-  <DeviceControl v-if="connected" @disconnect="disconnect"/>
+  <section class="section" v-if="bluetoothEnabled === false">
+    <div class="container">
+      <article class="message is-warning">
+        <div class="message-header">
+          <p>Bluetooth Not Enabled</p>
+        </div>
+        <div class="message-body">
+          Please enable bluetooth
+        </div>
+      </article>
+    </div>
+  </section>
+
+  <template v-if="bluetoothEnabled">
+    <DeviceList v-if="!connected" @connect="connect" @error="onError"/>
+    <DeviceControl v-if="connected" @disconnect="disconnect"/>
+  </template>
 </div>
 </template>
 
@@ -19,6 +34,7 @@ export default {
     DeviceList
   },
   data: () => ({
+    bluetoothEnabled: null,
     connected: false,
     busy: false,
   }),
@@ -43,9 +59,20 @@ export default {
     this.connected = this.$dongle.isConnected()
     if (this.connected){ connected() }
 
+    // monitor bluetooth enabled state
+    const intr = setInterval(() => {
+      ble.isEnabled(() => {
+        this.bluetoothEnabled = true
+      }, () => {
+        this.bluetoothEnabled = false
+        this.connected = false
+      })
+    }, 500)
+
     this.$on('hook:beforeDestroy', () => {
       this.$dongle.off('connected', connected)
       this.$dongle.off('disconnected', disconnected)
+      clearInterval(intr)
     })
   },
 

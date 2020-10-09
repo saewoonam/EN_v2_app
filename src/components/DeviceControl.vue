@@ -6,19 +6,24 @@
     <div class="level-left">
       <div class="level-item">
         <div class="heading is-size-6">
-          Connected to: {{ deviceName || '(Anonymous)' }}
+          {{ deviceName || '(Anonymous)' }}
         </div>
       </div>
     </div>
     <div class="level-right">
       <div class="level-item has-text-right">
         <b-field grouped position="is-right">
+
           <div class="control battery">
             <b-icon :icon="batteryIcon" :type="batteryColor" />
           </div>
           <div class="control">
             <b-button @click="fetchState" type="is-rounded is-inverted" icon-right="reload"></b-button>
           </div>
+          <div class="control">
+            <b-button @click="disconnect" type="is-danger is-rounded" icon-right="power-plug-off"></b-button>
+          </div>
+
         </b-field>
       </div>
     </div>
@@ -46,16 +51,10 @@
     <b-field grouped position="is-centered" class="block">
       <div class="control">
         <b-button size="is-medium" @click="fetchData">Upload</b-button>
-        <!-- <b&#45;button size="is&#45;medium" :type="flashWrite ? 'is&#45;warning' : 'is&#45;info'" @click="toggleFlash">{{ flashWrite ? 'Stop Recording' : 'Start Recording' }}</b&#45;button> -->
+        <!-- <b-button size="is-medium" :type="flashWrite ? 'is-warning' : 'is-info'" @click="toggleFlash">{{ flashWrite ? 'Stop Recording' : 'Start Recording' }}</b-button> -->
       </div>
       <div class="control">
         <b-button size="is-medium" @click="recentData">View recent</b-button>
-      </div>
-    </b-field>
-
-    <b-field grouped position="is-centered" class="block">
-      <div class="control">
-        <b-button @click="disconnect" type="is-danger">Disconnect</b-button>
       </div>
     </b-field>
   </div>

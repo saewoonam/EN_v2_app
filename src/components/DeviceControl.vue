@@ -30,8 +30,7 @@
         <b-taglist attached>
           <b-tag type="is-dark">
             <b-icon icon="timer" size="is-small" />
-          </b-tag>
-          <b-tag type="is-info">{{ uptimeText }}</b-tag>
+          </b-tag> <b-tag type="is-info">{{ uptimeText }}</b-tag>
         </b-taglist>
       </div>
       <div class="control">
@@ -46,10 +45,11 @@
 
     <b-field grouped position="is-centered" class="block">
       <div class="control">
-        <b-button size="is-medium" :type="flashWrite ? 'is-warning' : 'is-info'" @click="toggleFlash">{{ flashWrite ? 'Stop Recording' : 'Start Recording' }}</b-button>
+        <b-button size="is-medium" @click="fetchData">Upload</b-button>
+        <!-- <b&#45;button size="is&#45;medium" :type="flashWrite ? 'is&#45;warning' : 'is&#45;info'" @click="toggleFlash">{{ flashWrite ? 'Stop Recording' : 'Start Recording' }}</b&#45;button> -->
       </div>
       <div class="control">
-        <b-button size="is-medium" @click="fetchData">Fetch Data</b-button>
+        <b-button size="is-medium" @click="recentData">View recent</b-button>
       </div>
     </b-field>
 
@@ -151,7 +151,9 @@ export default {
       this.busy = true
       this.deviceName = this.$dongle.getDeviceName()
       await this.fetchState()
-      await this.$dongle.syncClock()
+      if ((this.status & (1<<2)) == 4) {
+        await this.$dongle.syncClock()
+      }
       this.busy = false
     }
     const disconnected = () => {}
@@ -262,6 +264,10 @@ export default {
         this._dataFetchInterrupt.interrupt = true
       }
       this.progress = 0
+    },
+
+    recentData() {
+      // put recent data in a table here.
     },
 
     async fetchData(){

@@ -64,6 +64,8 @@ nav.level {
 </style>
 
 <script>
+import _find from 'lodash/find'
+
 export default {
   name: 'DeviceList',
   props: {
@@ -83,7 +85,11 @@ export default {
       // ble.scan(['fd6f'], 5, app.onDiscoverDevice, app.onError);
       // ble.scan(['fd6f'], 5, app.onDiscoverDevice, app.onError);
       const discover = device => {
-        if (device.rssi <= -80){ return }
+        if (
+          device.rssi <= -80 &&
+          !_find(this.devices, { id: device.id })
+        ){ return }
+
         this.devices.push(device)
       }
       ble.scan([], 5, discover, this.onError.bind(this));

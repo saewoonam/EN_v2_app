@@ -58,18 +58,27 @@ function Controller(){
       throw new Error('Invalid UUID specified')
     }
     await disconnect()
-    ble.connect(
-      deviceId,
-      (c) => {
-        connection = c
-        subscribe()
-        pubsub.$emit('connected', connection)
-      },
-      () => {
-        connection = null
-        pubsub.$emit('disconnected')
-      }
-    )
+    return new Promise((resolve, reject) => {
+      let timeout = setTimeout(() => {
+        ble.disconnect(deviceId)
+        reject(new Error('Connection timeout'))
+      }, COMMAND_TIMEOUT)
+
+      ble.connect(
+        deviceId,
+        (c) => {
+          clearTimeout(timeout)
+          connection = c
+          subscribe()
+          pubsub.$emit('connected', connection)
+          resolve(c)
+        },
+        () => {
+          connection = null
+          pubsub.$emit('disconnected')
+        }
+      )
+    })
   }
 
   async function subscribe(){
@@ -217,7 +226,7 @@ function Controller(){
     await sendCommand('setClock')
   }
 
-  async function fetchData(opts = { interrupt: false, onProgress }){
+  async function fetchData(opts = { interrupt: false, onProgress: () => {} }){
     assertConnection()
 
     const blocksTotal = await getMemoryUsage()

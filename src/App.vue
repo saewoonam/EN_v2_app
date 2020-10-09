@@ -79,20 +79,19 @@ export default {
   methods: {
 
     async connect(id){
-      this.loading = true
       this.busy = true
-      await this.$dongle.connect(id)
+      await this.$dongle.connect(id).catch(e => this.onError(e))
     },
 
     async disconnect(){
-      await this.$dongle.disconnect()
+      await this.$dongle.disconnect().catch(e => this.onError(e))
     },
 
     onError(e){
       this.$buefy.snackbar.open({
         message: 'Error: ' + e.message,
         type: 'is-danger',
-        position: 'is-top'
+        position: 'is-bottom'
       })
       console.error(e)
       this.busy = false

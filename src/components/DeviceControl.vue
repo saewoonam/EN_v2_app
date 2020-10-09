@@ -48,16 +48,30 @@
       </div>
     </b-field>
 
+    <b-progress v-if="progress > 0" :value="progress"></b-progress>
+
     <b-field grouped position="is-centered" class="block">
       <div class="control">
-        <b-button size="is-medium" @click="fetchData">Upload</b-button>
-        <!-- <b-button size="is-medium" :type="flashWrite ? 'is-warning' : 'is-info'" @click="toggleFlash">{{ flashWrite ? 'Stop Recording' : 'Start Recording' }}</b-button> -->
+        <b-button size="is-medium" @click="syncWithServer" v-if="progress === 0">Upload</b-button>
+        <b-button size="is-medium" type="is-danger" @click="cancelDataFetch" v-else>
+          <b-icon
+            icon="sync"
+            custom-class="mdi-spin">
+          </b-icon>
+          Cancel
+        </b-button>
       </div>
       <div class="control">
-        <b-button size="is-medium" @click="recentData">View recent</b-button>
+        <b-button size="is-medium" @click="recentData" :disabled="progress > 0">View recent</b-button>
       </div>
+      <!-- <div class="control">
+        <b-button size="is-medium" :type="flashWrite ? 'is-warning' : 'is-info'" @click="toggleFlash">{{ flashWrite ? 'Stop Recording' : 'Start Recording' }}</b-button>
+      </div> -->
     </b-field>
+
+    <EncounterTable v-if="encounterData.length" :data="encounterData"/>
   </div>
+
 </div>
 </template>
 
@@ -96,6 +110,9 @@
 <script>
 import { bytesToData, bytesToCsv, parse_binary } from '../tools/data-parse'
 import { InterruptException } from '../plugins/dongle-control'
+import EncounterTable from './EncounterTable'
+
+const SERVER_SYNC_URL = 'http://68.183.130.247:8000/api/encounters/debug'
 
 function msToTime(s) {
   let ms = s % 1000
@@ -113,6 +130,7 @@ export default {
   props: {
   },
   components: {
+    EncounterTable
   },
   data: () => ({
     busy: false,
@@ -123,7 +141,8 @@ export default {
     status: 0,
     flashWrite: 0,
     recordedPrimary: false,
-    progress: 0
+    progress: 0,
+    encounterData: []
   }),
   watch: {
   },
@@ -184,7 +203,7 @@ export default {
       this.$buefy.snackbar.open({
         message: msg,
         type,
-        position: 'is-top'
+        position: 'is-bottom'
       })
     },
 
@@ -258,6 +277,13 @@ export default {
       })
     },
 
+    recentData() {
+      // put recent data in a table here.
+      this.encounterData = [{
+        encounterId: '034045-34-5-43-45--3465'
+      }]
+    },
+
     cancelDataFetch(){
       if (this._dataFetchInterrupt){
         this._dataFetchInterrupt.interrupt = true
@@ -265,22 +291,28 @@ export default {
       this.progress = 0
     },
 
-    recentData() {
-      // put recent data in a table here.
+    async syncWithServer(){
+      let data = await this.fetchData()
+
+      if (!data){ return }
+
+      await this.sendDataToServer(data).catch(e => this.onError(e))
+
+      this.feedback('Synched with server', 'is-success')
     },
 
     async fetchData(){
       this.cancelDataFetch()
-      this._dataFetchInterrupt = {
-        interrupt: false,
-        onProgress: (received, expected) => {
-          this.progress = received / expected * 100
-        }
-      }
 
       try {
+        this._dataFetchInterrupt = {
+          interrupt: false,
+          onProgress: (received, expected) => {
+            this.progress = received / expected * 100
+          }
+        }
+
         let data = await this.$dongle.fetchData(this._dataFetchInterrupt)
-        console.log(bytesToData(data))
         return bytesToData(data)
       } catch (e){
         if (e instanceof InterruptException){
@@ -290,6 +322,36 @@ export default {
         }
       } finally {
         this.progress = 0
+      }
+    },
+
+    async sendDataToServer(data){
+      let encounters = data.map(d => {
+        return {
+          encounterId: d.encounterId,
+          timestamp: d.timestamp,
+          _meta: d
+        }
+      })
+      const batchLength = 50
+      const batches = []
+      for (let i = 0, l = encounters.length; i < l; i++){
+        let b = Math.floor(i / batchLength)
+        let batch = batches[b] = batches[b] || []
+        batch.push(encounters[i])
+      }
+      for (let batch of batches){
+        let response = await fetch(SERVER_SYNC_URL, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({ encounters: batch })
+        })
+        let res = await response.json()
+        if (res.errors.length){
+          throw new Error('Server Error: ' + res.errors[0].message)
+        }
       }
     },
 

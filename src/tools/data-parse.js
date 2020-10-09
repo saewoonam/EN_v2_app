@@ -107,7 +107,7 @@ function getCSVData(data) {
     mean38, n38, min38, max38, std238,
     mean39, n39, min39, max39, std239,
     flag: data.flag, flag2: data.flag2,
-    id: data.clientKey, rssi
+    id: data.encounterId, rssi
   }
 }
 
@@ -120,12 +120,12 @@ function getDataFromView(arrayView) {
   timestamp = timestamp.split('.')
   timestamp = timestamp[0]
 
-  let clientKey = data2hex(parsed.public_key)
+  let encounterId = data2hex(parsed.public_key)
 
   return {
     ...parsed,
     timestamp,
-    clientKey
+    encounterId
   }
 }
 

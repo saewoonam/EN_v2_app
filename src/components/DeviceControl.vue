@@ -297,6 +297,7 @@ export default {
       if (!data){ return }
 
       await this.sendDataToServer(data).catch(e => this.onError(e))
+      this.encounterData = data
 
       this.feedback('Synched with server', 'is-success')
     },

@@ -229,7 +229,7 @@ function Controller(){
   async function fetchData(opts = { interrupt: false, onProgress: () => {} }){
     assertConnection()
 
-    const blocksTotal = await getMemoryUsage()
+    const blocksTotal = (await getMemoryUsage())[0]
     const blockSize = 32
     const expectedLength = blocksTotal * blockSize
 

@@ -313,7 +313,7 @@ function Controller(){
       })
     }
     try {
-      await sendCommand('startDataDownload')
+      await sendCommand('recentData')
 
       while(!done){
         if (opts.interrupt){

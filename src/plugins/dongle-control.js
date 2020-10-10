@@ -226,6 +226,117 @@ function Controller(){
     await sendCommand('setClock')
   }
 
+  function checkForMarkOrHeader(raw) {
+    let dv = new DataView(raw)
+    let offset = 4;
+    let t = dv.getUint32(offset, true); // little endian
+    if (t > 0) {
+      /* Check if mark, unmark, header, etc... */
+      let b = dv.getUint8(offset)
+      let index = offset;
+      do {
+        if (b != dv.getUint8(index)) {
+          break;
+        }
+        index++;
+      } while (index < offset + 32);
+      if (index == offset + 32) {
+        t = -1; // found a tag
+        console.log(" found tag");
+      } else {
+    } // check if first 4 bytes> 0,it is a timestamp
+      if (t>0) {
+        return false;
+      } else {
+        return true;
+      }
+    }
+  }
+
+  function raw2row(raw) {
+    let dv = new DataView(raw)
+    let offset = 4;
+    let t = dv.getUint32(offset, true);
+    let row = {}
+    row.timestamp = new Date(t * 60 * 1000).toLocaleString();
+    let sound = new Uint16Array(raw.slice(offset + 12, offset + 12 + 8))
+    let num = dv.getInt8(offset + 11)
+    row.sound = 2048;
+    if (num > 10) {
+      if (sound[1] < iqr_threshold) row.sound = sound[0];
+      if (sound[3] < iqr_threshold) row.sound = (sound[2] < row.sound) ?
+        sound[2] : row.sound;
+    }
+    if (row.sound == 2048) {
+      row.sound = 'NaN';
+    } else {
+      row.sound -= 50;
+      row.sound *= 192 / 19e6 * 343;
+      row.sound = row.sound.toFixed(2);
+    }
+    let rssi = new Int8Array(raw.slice(offset + 12 + 8, offset + 32))
+    row.rssi = (rssi.reduce((acc, data) => acc + data, 0) /
+      rssi.reduce((acc, data) => (data != 0) ? acc + 1 : acc, 0)).toFixed(1)
+    return row;
+  }
+
+  async function recentData(opts = { interrupt: false, onProgress: () => {} }){
+    assertConnection()
+
+    let data = []
+    let done = false;
+
+    function nextEncounter() {
+      return new Promise((resolve, reject) => {
+        let interval = setInterval(() => {
+          if (opts.interrupt){
+            clearInterval(interval)
+            notifyCallback = noop;
+            reject(new InterruptException())
+          }
+        }, 1000)
+        notifyCallback = (res) => {
+          let blockNumber = new Uint32Array(res, 0, 1)[0]
+          // let block = new Uint8Array(res, 4)
+          if (blockNumber == 0xFFFFFFFF) {
+            // console.log("done with recent")
+            notifyCallback = noop;
+            done = true;
+            // device.stopDataNotifications(handleDatae);
+            // CreateTableFromJSON(data);
+          } else {
+            if (!checkForMarkOrHeader(raw)) {
+              data.push(raw2row(res));
+            }
+          }
+        }
+      })
+    }
+    try {
+      await sendCommand('startDataDownload')
+
+      while(!done){
+        if (opts.interrupt){
+          throw new InterruptException()
+        }
+
+        try {
+          await nextEncounter()
+        } catch (e){
+          throw e
+        }
+        // if (opts.onProgress){
+        //   opts.onProgress(bytesReceived, expectedLength)
+        // }
+      }
+
+    } catch (err){
+      throw err
+    }
+
+    return data;
+  }
+
   async function fetchData(opts = { interrupt: false, onProgress: () => {} }){
     assertConnection()
 
@@ -330,6 +441,7 @@ function Controller(){
     sendCommand,
     setName,
     syncClock,
+    recentData,
     fetchData,
     getDeviceName: () => sanitize(connection.name || ''),
     isConnected: () => !!connection,

@@ -277,11 +277,15 @@ export default {
       })
     },
 
-    recentData() {
+    async recentData() {
       // put recent data in a table here.
-      this.encounterData = [{
-        encounterId: '034045-34-5-43-45--3465'
-      }]
+      try {
+        await this.$dongle.fetchRecent();
+        // this.encounterData = data;
+      } catch(e) {
+        this.onError(e)
+      }
+      this.encounterData = this.$dongle.getRecent();
     },
 
     cancelDataFetch(){

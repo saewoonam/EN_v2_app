@@ -16,9 +16,16 @@ export default {
   data: () => ({
     columns: [
       {
-        field: 'encounterId',
-        label: 'ID',
-        width: '40'
+        field: 'timestamp',
+        label: 'timestamp',
+      },
+      {
+        field: 'sound',
+        label: 'sound[m]',
+      },
+      {
+        field: 'rssi',
+        label: 'rssi [dBm]',
       }
     ]
   }),

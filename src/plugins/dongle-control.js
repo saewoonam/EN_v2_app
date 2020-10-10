@@ -38,6 +38,8 @@ function Controller(){
   let subscribed = false
   let connection = null
   let notifyCallback = noop
+  let encounterTable = []
+  let doneRecent = false;
 
   function assertConnection(){
     if (!connection){
@@ -81,7 +83,7 @@ function Controller(){
     })
   }
 
-  async function subscribe(){
+  function subscribe(){
     assertConnection()
     if (subscribed) { return }
     ble.startNotification(
@@ -280,7 +282,7 @@ function Controller(){
     return row;
   }
 
-  async function recentData(opts = { interrupt: false, onProgress: () => {} }){
+  async function fetchRecent_async(opts = { interrupt: false, onProgress: () => {} }){
     assertConnection()
 
     let data = []
@@ -313,12 +315,13 @@ function Controller(){
       })
     }
     try {
+
       await sendCommand('recentData')
 
       while(!done){
-        if (opts.interrupt){
-          throw new InterruptException()
-        }
+        // if (opts.interrupt){
+        //   throw new InterruptException()
+        // }
 
         try {
           await nextEncounter()
@@ -333,10 +336,61 @@ function Controller(){
     } catch (err){
       throw err
     }
-
+    row = {}
+    row.timestamp = "today"
+    row.sound = "2.0"
+    row.rssi = "-10.0"
+    data.push(row)
     return data;
   }
 
+  async function fetchRecent(){
+    encounterTable = []
+    doneRecent = false;
+    let row = {}
+    row.timestamp = "today"
+    row.sound = "3.0"
+    row.rssi = "-10.0"
+    encounterTable.push(row)
+
+    assertConnection()
+    /* Set callback for notifications */
+    let handleCmde = function(res){
+      let blockNumber = new Uint32Array(res, 0, 1)[0]
+      console.log(blockNumber);
+      if (blockNumber == 0xFFFFFFFF) {
+        ble.stopNotification(
+          connection.id,
+          SERVICE_UUID,
+          CHARACTERISTICS.data
+        )
+        notifyCallback = noop;
+        doneRecent = true;
+      } else {
+        if (!checkForMarkOrHeader(raw)) {
+          encounterTable.push(raw2row(res));
+        }
+      }
+    }
+
+
+    ble.startNotification(
+      connection.id,
+      SERVICE_UUID,
+      CHARACTERISTICS.data,
+      handleCmde
+    )
+
+    try {
+      await sendCommand('recentData')
+    } catch (err){
+      throw err
+    }
+  }
+
+  function queryDoneRecent() {
+    return doneRecent;
+  }
   async function fetchData(opts = { interrupt: false, onProgress: () => {} }){
     assertConnection()
 
@@ -433,15 +487,19 @@ function Controller(){
     return result
   }
 
+  function getRecent() {
+    return encounterTable;
+  }
   return {
     connect,
     disconnect,
     getMemoryUsage,
     getBatteryLevel,
-    sendCommand,
     setName,
     syncClock,
-    recentData,
+    fetchRecent,
+    queryDoneRecent,
+    getRecent,
     fetchData,
     getDeviceName: () => sanitize(connection.name || ''),
     isConnected: () => !!connection,

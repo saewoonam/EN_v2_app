@@ -1,6 +1,6 @@
 <template>
 <div class="encounter-table">
-  <b-table :data="data" :columns="columns"></b-table>
+  <b-table :data="data" :columns="columns" :mobile-cards=false></b-table>
 </div>
 </template>
 

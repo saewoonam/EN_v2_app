@@ -18,6 +18,7 @@
 //
 
 import Vue from 'vue'
+Vue.config.devtools = true
 import App from './App.vue'
 import dongleControl from './plugins/dongle-control'
 // import router from '@/router'
@@ -36,6 +37,8 @@ const vueApp = new Vue({
   // router,
   render: h => h(App),
 })
+Vue.config.devtools = true
+
 
 document.addEventListener('deviceready', () => {
   // mount the vue app when device ready

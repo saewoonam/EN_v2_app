@@ -279,9 +279,28 @@ export default {
 
     recentData() {
       // put recent data in a table here.
-      this.encounterData = [{
-        encounterId: '034045-34-5-43-45--3465'
-      }]
+      // this.encounterData = [{
+      //   encounterId: '034045-34-5-43-45--3465'
+      // }]
+
+      // this.encounterData = []
+      // let row = {}
+      // row.timestamp = "today"
+      // row.sound = "2.0"
+      // row.rssi = "-10.0"
+      // this.encounterData.push(row);
+
+      // this.encounterData = this.$dongle.recentData()
+
+      // try {
+      //   this.$dongle.recentData()
+      // } catch(e) {
+      //   this.onError(e)
+      // }
+      // this.encounterData = this.$dongle.getDataRecent()
+      this.encounterData = []
+      this.$dongle.recentData(this.encounterData)
+        .catch(err => this.onError(err))
     },
 
     cancelDataFetch(){

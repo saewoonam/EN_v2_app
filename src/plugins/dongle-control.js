@@ -38,6 +38,12 @@ function Controller(){
   let subscribed = false
   let connection = null
   let notifyCallback = noop
+  let doneRecent = false;
+  let dataRecent = [];
+  let row = {}
+  row.timestamp = "today"
+  row.sound = "3.0"
+  row.rssi = "-10.0"
 
   function assertConnection(){
     if (!connection){
@@ -227,25 +233,28 @@ function Controller(){
   }
 
   function checkForMarkOrHeader(raw) {
-    let dv = new DataView(raw)
+    // let dv = new DataView(raw)
     let offset = 4;
-    let t = dv.getUint32(offset, true); // little endian
+    //let t = dv.getUint32(offset, true); // little endian
+    let t = new Uint32Array(raw, offset, 1)[0]; // little endian
     if (t > 0) {
       /* Check if mark, unmark, header, etc... */
-      let b = dv.getUint8(offset)
+      // let b = dv.getUint8(offset)
+      let b = new Uint8Array(raw, offset, 1)[0];
       let index = offset;
       do {
-        if (b != dv.getUint8(index)) {
+        // if (b != dv.getUint8(index)) {
+        if (b != new Uint8Array(raw, index, 1)[0]) {
           break;
         }
         index++;
       } while (index < offset + 32);
       if (index == offset + 32) {
-        t = -1; // found a tag
+        t = -1; // found a tag 
         console.log(" found tag");
-      } else {
-    } // check if first 4 bytes> 0,it is a timestamp
-      if (t>0) {
+      } else {}
+      // check if first 4 bytes > 0, it is a timestamp
+      if (t > 0) {
         return false;
       } else {
         return true;
@@ -259,8 +268,16 @@ function Controller(){
     let t = dv.getUint32(offset, true);
     let row = {}
     row.timestamp = new Date(t * 60 * 1000).toLocaleString();
-    let sound = new Uint16Array(raw.slice(offset + 12, offset + 12 + 8))
+    let sound = [];
+
     let num = dv.getInt8(offset + 11)
+    sound[0] = dv.getUint16(offset + 12, true);
+    sound[1] = dv.getUint16(offset + 14, true);
+    sound[2] = dv.getUint16(offset + 16, true);
+    sound[3] = dv.getUint16(offset + 18, true);
+    row.sound = num;
+    let iqr_threshold = 100;
+
     row.sound = 2048;
     if (num > 10) {
       if (sound[1] < iqr_threshold) row.sound = sound[0];
@@ -271,20 +288,85 @@ function Controller(){
       row.sound = 'NaN';
     } else {
       row.sound -= 50;
-      row.sound *= 192 / 19e6 * 343;
+      row.sound *= 192 / 19e6 *
+        343;
       row.sound = row.sound.toFixed(2);
     }
-    let rssi = new Int8Array(raw.slice(offset + 12 + 8, offset + 32))
-    row.rssi = (rssi.reduce((acc, data) => acc + data, 0) /
-      rssi.reduce((acc, data) => (data != 0) ? acc + 1 : acc, 0)).toFixed(1)
+    let sum = 0;
+    num = 0;
+    let i = offset + 12 + 8;
+    let rssi = []
+    for (i=offset+12+8; i<(offset+32); i++) {
+      rssi.push(dv.getInt8(i))
+    }
+    row.rssi = rssi.reduce((acc, data) => acc + data, 0)
+    num = rssi.reduce((acc, data) => (data != 0) ? acc + 1 : acc, 0);
+    row.rssi = (row.rssi/num).toFixed(1)
     return row;
   }
 
-  async function recentData(opts = { interrupt: false, onProgress: () => {} }){
+  // async function recentData() {
+  function recentData_simple() {
     assertConnection()
 
-    let data = []
-    let done = false;
+    dataRecent = []
+    doneRecent = false;
+    let row = {}
+    row.timestamp = 1
+    row.sound = 2
+    row.rssi = 3
+    // row.timestamp = "today"
+    // row.sound = "3.0"
+    // row.rssi = "-10.0"
+    dataRecent.push(row)
+  }
+
+  async function recentData(tableData) {
+    assertConnection()
+
+    // tableData = []
+    doneRecent = false;
+    // tableData.push(row)
+
+    let handleCmde = function(res){
+      let blockNumber = new Uint32Array(res, 0, 1)[0]
+      if (blockNumber == 0xFFFFFFFF) {
+        ble.stopNotification(
+          connection.id,
+          SERVICE_UUID,
+          CHARACTERISTICS.data
+        )
+        subscribed = false;
+        subscribe();
+        notifyCallback = noop;
+        doneRecent = true;
+      } else {
+        tableData.push(raw2row(res));
+      }
+    }
+    unsubscribe();
+    ble.startNotification(
+      connection.id,
+      SERVICE_UUID,
+      CHARACTERISTICS.data,
+      handleCmde
+    )
+    try {
+      await sendCommand('recentData')
+    } catch (err){
+      throw err
+    }
+  }
+
+  function getDataRecent() {
+    return dataRecent;
+  }
+
+  async function recentData_async(opts = { interrupt: false, onProgress: () => {} }){
+    assertConnection()
+
+    dataRecent = []
+    doneRecent = false;
 
     function nextEncounter() {
       return new Promise((resolve, reject) => {
@@ -301,12 +383,12 @@ function Controller(){
           if (blockNumber == 0xFFFFFFFF) {
             // console.log("done with recent")
             notifyCallback = noop;
-            done = true;
+            doneRecent = true;
             // device.stopDataNotifications(handleDatae);
             // CreateTableFromJSON(data);
           } else {
             if (!checkForMarkOrHeader(raw)) {
-              data.push(raw2row(res));
+              dataRecent.push(raw2row(res));
             }
           }
         }
@@ -315,7 +397,7 @@ function Controller(){
     try {
       await sendCommand('recentData')
 
-      while(!done){
+      while(!doneRecent){
         if (opts.interrupt){
           throw new InterruptException()
         }
@@ -334,7 +416,7 @@ function Controller(){
       throw err
     }
 
-    return data;
+    return dataRecent;
   }
 
   async function fetchData(opts = { interrupt: false, onProgress: () => {} }){
@@ -442,6 +524,7 @@ function Controller(){
     setName,
     syncClock,
     recentData,
+    getDataRecent,
     fetchData,
     getDeviceName: () => sanitize(connection.name || ''),
     isConnected: () => !!connection,

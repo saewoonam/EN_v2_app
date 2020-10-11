@@ -87,7 +87,7 @@ function Controller(){
     })
   }
 
-  async function subscribe(){
+  function subscribe(){
     assertConnection()
     if (subscribed) { return }
     ble.startNotification(
@@ -395,6 +395,7 @@ function Controller(){
       })
     }
     try {
+
       await sendCommand('recentData')
 
       while(!doneRecent){
@@ -419,6 +420,53 @@ function Controller(){
     return dataRecent;
   }
 
+  async function fetchRecent(){
+    encounterTable = []
+    doneRecent = false;
+    let row = {}
+    row.timestamp = "today"
+    row.sound = "3.0"
+    row.rssi = "-10.0"
+    encounterTable.push(row)
+
+    assertConnection()
+    /* Set callback for notifications */
+    let handleCmde = function(res){
+      let blockNumber = new Uint32Array(res, 0, 1)[0]
+      console.log(blockNumber);
+      if (blockNumber == 0xFFFFFFFF) {
+        ble.stopNotification(
+          connection.id,
+          SERVICE_UUID,
+          CHARACTERISTICS.data
+        )
+        notifyCallback = noop;
+        doneRecent = true;
+      } else {
+        if (!checkForMarkOrHeader(raw)) {
+          encounterTable.push(raw2row(res));
+        }
+      }
+    }
+
+
+    ble.startNotification(
+      connection.id,
+      SERVICE_UUID,
+      CHARACTERISTICS.data,
+      handleCmde
+    )
+
+    try {
+      await sendCommand('recentData')
+    } catch (err){
+      throw err
+    }
+  }
+
+  function queryDoneRecent() {
+    return doneRecent;
+  }
   async function fetchData(opts = { interrupt: false, onProgress: () => {} }){
     assertConnection()
 
@@ -515,12 +563,14 @@ function Controller(){
     return result
   }
 
+  function getRecent() {
+    return encounterTable;
+  }
   return {
     connect,
     disconnect,
     getMemoryUsage,
     getBatteryLevel,
-    sendCommand,
     setName,
     syncClock,
     recentData,

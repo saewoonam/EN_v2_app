@@ -277,7 +277,7 @@ export default {
       })
     },
 
-    recentData() {
+    async recentData() {
       // put recent data in a table here.
       // this.encounterData = [{
       //   encounterId: '034045-34-5-43-45--3465'

@@ -36,15 +36,15 @@ const uSound = new StructSchema([
 
 const encounterRecord = new StructSchema([
   {
-    key: 'mac',
-    type: 'uint8',
-    length: 6,
-    littleEndian: true
-  },
-  {
     key: 'minute',
     type: 'uint32',
     length: 1,
+    littleEndian: true
+  },
+  {
+    key: 'mac',
+    type: 'uint8',
+    length: 6,
     littleEndian: true
   },
   {

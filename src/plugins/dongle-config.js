@@ -20,6 +20,10 @@ export const COMMANDS = Object.freeze({
     notify: true,
     returnType: Uint32Array
   },
+  getUptimeB: {
+    value: 'A',
+    returnType: Uint32Array
+  },
   setClock: {
     value: 'O',
     returnType: Uint8Array

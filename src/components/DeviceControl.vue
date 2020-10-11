@@ -190,9 +190,10 @@ export default {
   methods: {
     async fetchState(){
       await this.checkBattery()
-      await this.checkFlashUsage()
+      // await this.checkFlashUsage()
       await this.getMemoryUsage()
       await this.getUptime()
+      // await this.getUptimeB()
     },
 
     disconnect(){
@@ -232,6 +233,11 @@ export default {
         this.uptime = [used[0], used[1]]
       })
       .catch(err => this.onError(err))
+    },
+
+    getUptimeB() {
+      return this.$dongle.getUptimeB(this.uptime)
+        .catch(err => this.onError(err))
     },
 
     toggleFlash(){
@@ -300,7 +306,10 @@ export default {
       // this.encounterData = this.$dongle.getDataRecent()
       this.encounterData = []
       this.$dongle.recentData(this.encounterData)
-        .catch(err => this.onError(err))
+        .catch(err => {
+          console.log("error in try to get recent data")
+          this.onError(err)
+        })
     },
 
     cancelDataFetch(){

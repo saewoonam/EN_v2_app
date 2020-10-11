@@ -36,7 +36,6 @@ export class InterruptException extends Error {
 function Controller(){
   // just using vue for events
   const pubsub = new Vue()
-  let subscribed = false
   let connection = null
   let notifyCallback = noop
   let doneRecent = false;
@@ -54,7 +53,6 @@ function Controller(){
 
   async function disconnect(){
     if (!connection){ return }
-    unsubscribe()
     await ble.withPromises.disconnect(connection.id)
     connection = null
     pubsub.$emit('disconnected')
@@ -76,7 +74,6 @@ function Controller(){
         (c) => {
           clearTimeout(timeout)
           connection = c
-          subscribe()
           pubsub.$emit('connected', connection)
           resolve(c)
         },
@@ -87,34 +84,25 @@ function Controller(){
       )
     })
   }
-
-  async function subscribe(){
-    assertConnection()
-    if (subscribed) { return }
-    ble.startNotification(
-      connection.id,
-      SERVICE_UUID,
-      CHARACTERISTICS.data,
-      (res) => {
-        notifyCallback(res)
-        notifyCallback = noop
-      }
-    )
-
-    subscribed = true
-  }
-
-  async function unsubscribe(){
-    assertConnection()
-    if (!subscribed) { return }
-    await ble.withPromises.stopNotification(
-      connection.id,
-      SERVICE_UUID,
-      CHARACTERISTICS.data
-    )
-
-    subscribed = false
-  }
+  //
+  // async function subscribe(callback){
+  //   assertConnection()
+  //   ble.startNotification(
+  //     connection.id,
+  //     SERVICE_UUID,
+  //     CHARACTERISTICS.data,
+  //     callback
+  //   )
+  // }
+  //
+  // async function unsubscribe(){
+  //   assertConnection()
+  //   await ble.withPromises.stopNotification(
+  //     connection.id,
+  //     SERVICE_UUID,
+  //     CHARACTERISTICS.data
+  //   )
+  // }
 
   async function getMemoryUsage(){
     assertConnection()
@@ -153,13 +141,22 @@ function Controller(){
       assertConnection()
 
       let timeout = setTimeout(() => {
+        ble.stopNotification(
+          connection.id,
+          SERVICE_UUID,
+          CHARACTERISTICS.data
+        )
         notifyCallback = noop
         reject(new Error('Command timed out before receiving response via notify'))
       }, COMMAND_TIMEOUT)
 
       function done(res) {
         clearTimeout(timeout)
-        notifyCallback = noop
+        ble.stopNotification(
+          connection.id,
+          SERVICE_UUID,
+          CHARACTERISTICS.data
+        )
 
         try {
           let data = res ?
@@ -172,7 +169,12 @@ function Controller(){
       }
 
       if (command.notify){
-        notifyCallback = done
+        ble.startNotification(
+          connection.id,
+          SERVICE_UUID,
+          CHARACTERISTICS.data,
+          done
+        )
       }
 
       ble.withPromises.write(
@@ -185,8 +187,13 @@ function Controller(){
           done(res)
         }
       }).catch(err => {
+        ble.stopNotification(
+          connection.id,
+          SERVICE_UUID,
+          CHARACTERISTICS.data
+        )
         notifyCallback = noop
-
+        console.log("Error trying to send: ", command.value)
         reject(err)
       })
 
@@ -212,6 +219,28 @@ function Controller(){
     )
 
     await sendCommand('setName')
+  }
+
+  async function getUptimeB(uptime) {
+    console.log("in get uptimeB")
+    let handleNotification = function(res){
+      ble.stopNotification(
+        connection.id,
+        SERVICE_UUID,
+        CHARACTERISTICS.data
+      )
+      let time = new Uint32Array(res)
+      uptime[0] = time[0]
+      uptime[1] = time[1]
+      done = true;
+    }
+    ble.startNotification(
+      connection.id,
+      SERVICE_UUID,
+      CHARACTERISTICS.data,
+      handleNotification
+    )
+    await sendCommand('getUptimeB')
   }
 
   async function syncClock(){
@@ -293,28 +322,14 @@ function Controller(){
     return row;
   }
 
-  // async function recentData() {
-  function recentData_simple() {
-    assertConnection()
-
-    dataRecent = []
-    doneRecent = false;
-    let row = {}
-    row.timestamp = 1
-    row.sound = 2
-    row.rssi = 3
-    // row.timestamp = "today"
-    // row.sound = "3.0"
-    // row.rssi = "-10.0"
-    dataRecent.push(row)
-  }
-
   async function recentData(tableData) {
     assertConnection()
 
     // tableData = []
     doneRecent = false;
     // tableData.push(row)
+    let local = []
+    console.log('recentData')
 
     let handleCmde = function(res){
       let blockNumber = new Uint32Array(res, 0, 1)[0]
@@ -324,86 +339,54 @@ function Controller(){
           SERVICE_UUID,
           CHARACTERISTICS.data
         )
-        subscribed = false;
-        subscribe();
         notifyCallback = noop;
+        // row.timestamp = "today"
+        // row.sound = local.length
+        // console.log(local)
+        // console.log(local.length)
+        // row.rssi = -1
+        // tableData.push(row)
         doneRecent = true;
       } else {
+        local.push(res);
         tableData.push(raw2row(res));
       }
     }
-    unsubscribe();
+    // notifyCallback = handleCmde
+
+    // await unsubscribe();
+    // ble.stopNotification(
+    //   connection.id,
+    //   SERVICE_UUID,
+    //   CHARACTERISTICS.data
+    // )
     ble.startNotification(
       connection.id,
       SERVICE_UUID,
       CHARACTERISTICS.data,
       handleCmde
     )
-    try {
-      await sendCommand('recentData')
-    } catch (err){
-      throw err
+    if (true) {
+      try {
+        await sendCommand('recentData')
+      } catch (err){
+        console.log("error in trying to send recentData")
+        throw err
+      }
+    } else {
+
+      let cmd = "e"
+      ble.write(
+        connection.id,
+        SERVICE_UUID,
+        CHARACTERISTICS.rw,
+        toBtValue(cmd).buffer
+      )
     }
+
   }
 
   function getDataRecent() {
-    return dataRecent;
-  }
-
-  async function recentData_async(opts = { interrupt: false, onProgress: () => {} }){
-    assertConnection()
-
-    dataRecent = []
-    doneRecent = false;
-
-    function nextEncounter() {
-      return new Promise((resolve, reject) => {
-        let interval = setInterval(() => {
-          if (opts.interrupt){
-            clearInterval(interval)
-            notifyCallback = noop;
-            reject(new InterruptException())
-          }
-        }, 1000)
-        notifyCallback = (res) => {
-          let blockNumber = new Uint32Array(res, 0, 1)[0]
-          // let block = new Uint8Array(res, 4)
-          if (blockNumber == 0xFFFFFFFF) {
-            // console.log("done with recent")
-            notifyCallback = noop;
-            doneRecent = true;
-            // device.stopDataNotifications(handleDatae);
-            // CreateTableFromJSON(data);
-          } else {
-            if (!checkForMarkOrHeader(raw)) {
-              dataRecent.push(raw2row(res));
-            }
-          }
-        }
-      })
-    }
-    try {
-      await sendCommand('recentData')
-
-      while(!doneRecent){
-        if (opts.interrupt){
-          throw new InterruptException()
-        }
-
-        try {
-          await nextEncounter()
-        } catch (e){
-          throw e
-        }
-        // if (opts.onProgress){
-        //   opts.onProgress(bytesReceived, expectedLength)
-        // }
-      }
-
-    } catch (err){
-      throw err
-    }
-
     return dataRecent;
   }
 
@@ -511,6 +494,7 @@ function Controller(){
     sendCommand,
     setName,
     syncClock,
+    getUptimeB,
     recentData,
     getDataRecent,
     fetchData,

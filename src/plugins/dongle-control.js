@@ -1,6 +1,7 @@
 import Vue from 'vue'
 import { SERVICE_UUID, CHARACTERISTICS, COMMANDS } from './dongle-config'
 import sanitize from 'sanitize-filename'
+import {rawRecentToData} from '../tools/data-parse'
 
 const COMMAND_TIMEOUT = 5000
 const noop = () => {}
@@ -263,27 +264,19 @@ function Controller(){
   }
 
   function raw2row(raw) {
-    let dv = new DataView(raw)
-    let offset = 4;
-    let t = dv.getUint32(offset, true);
-    let row = {}
-    row.timestamp = new Date(t * 60 * 1000).toLocaleString();
-    let sound = [];
-
-    let num = dv.getInt8(offset + 11)
-    sound[0] = dv.getUint16(offset + 12, true);
-    sound[1] = dv.getUint16(offset + 14, true);
-    sound[2] = dv.getUint16(offset + 16, true);
-    sound[3] = dv.getUint16(offset + 18, true);
-    row.sound = num;
+    let parsed = rawRecentToData(raw)
     let iqr_threshold = 100;
-
+    let row = {}
+    row.timestamp = new Date(parsed.minute * 60 * 1000).toLocaleString();
     row.sound = 2048;
-    if (num > 10) {
-      if (sound[1] < iqr_threshold) row.sound = sound[0];
-      if (sound[3] < iqr_threshold) row.sound = (sound[2] < row.sound) ?
-        sound[2] : row.sound;
+    // console.log(parsed)
+    let uSound = parsed.usound_data
+    if (uSound.n > 10) {
+      if (uSound.left_iqr < iqr_threshold) row.sound = uSound.left;
+      if (uSound.right_iqr < iqr_threshold) row.sound = (uSound.right < row.sound) ?
+        uSound.right : row.sound;
     }
+
     if (row.sound == 2048) {
       row.sound = 'NaN';
     } else {
@@ -292,15 +285,10 @@ function Controller(){
         343;
       row.sound = row.sound.toFixed(2);
     }
-    let sum = 0;
-    num = 0;
-    let i = offset + 12 + 8;
-    let rssi = []
-    for (i=offset+12+8; i<(offset+32); i++) {
-      rssi.push(dv.getInt8(i))
-    }
+
+    let rssi = parsed.rssi_values
     row.rssi = rssi.reduce((acc, data) => acc + data, 0)
-    num = rssi.reduce((acc, data) => (data != 0) ? acc + 1 : acc, 0);
+    let num = rssi.reduce((acc, data) => (data != 0) ? acc + 1 : acc, 0);
     row.rssi = (row.rssi/num).toFixed(1)
     return row;
   }

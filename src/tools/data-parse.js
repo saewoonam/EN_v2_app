@@ -8,6 +8,11 @@ const BLOCK_SIZE = 32 // bytes
 
 const uSound = new StructSchema([
   {
+    key: 'n',
+    type: 'uint8',
+    littleEndian: true
+  },
+  {
     key: 'left',
     type: 'uint16',
     littleEndian: true
@@ -27,24 +32,19 @@ const uSound = new StructSchema([
     type: 'uint16',
     littleEndian: true
   },
-  {
-    key: 'n',
-    type: 'uint8',
-    littleEndian: true
-  },
 ])
 
 const encounterRecord = new StructSchema([
   {
-    key: 'mac',
-    type: 'uint8',
-    length: 6,
-    littleEndian: true
-  },
-  {
     key: 'minute',
     type: 'uint32',
     length: 1,
+    littleEndian: true
+  },
+  {
+    key: 'mac',
+    type: 'uint8',
+    length: 6,
     littleEndian: true
   },
   {
@@ -70,6 +70,44 @@ const encounterRecord = new StructSchema([
     length: 32,
     littleEndian: true
   }
+])
+
+const recentRecord = new StructSchema([
+  {
+    key: 'index',
+    type: 'uint32',
+    length: 1,
+    littleEndian: true
+  },
+  {
+    key: 'minute',
+    type: 'uint32',
+    length: 1,
+    littleEndian: true
+  },
+  {
+    key: 'mac',
+    type: 'uint8',
+    length: 6,
+    littleEndian: true
+  },
+  {
+    key: 'version',
+    type: 'uint8',
+    length: 1,
+    littleEndian: true
+  },
+  {
+    key: 'usound_data',
+    type: uSound,
+    length: 1,
+    littleEndian: true
+  },
+  {
+    key: 'rssi_values',
+    type: 'int8',
+    length: 12
+  },
 ])
 
 function convertToCsv(data) {
@@ -127,6 +165,12 @@ function getDataFromView(arrayView) {
     timestamp,
     encounterId
   }
+}
+
+export function rawRecentToData(raw) {
+  let row = new DataView(raw)
+  let parsed = recentRecord.read(row)
+  return parsed
 }
 
 export function bytesToData(raw){

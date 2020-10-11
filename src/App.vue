@@ -53,7 +53,6 @@ export default {
       this.connected = false
       this.busy = false
     }
-
     this.$dongle.on('connected', connected)
     this.$dongle.on('disconnected', disconnected)
     this.connected = this.$dongle.isConnected()

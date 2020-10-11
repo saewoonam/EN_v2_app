@@ -164,7 +164,7 @@ export default {
   },
 
   mounted(){
-
+    console.log("in mounted device control");
     const connected = async () => {
       this.busy = true
       this.deviceName = this.$dongle.getDeviceName()

@@ -1,7 +1,7 @@
 import Vue from 'vue'
 import { SERVICE_UUID, CHARACTERISTICS, COMMANDS } from './dongle-config'
 import sanitize from 'sanitize-filename'
-import {rawRecentToData} from '../tools/data-parse'
+import {raw2row} from '../tools/data-parse'
 
 const COMMAND_TIMEOUT = 5000
 const noop = () => {}
@@ -262,66 +262,6 @@ function Controller(){
     await sendCommand('setClock')
   }
 
-  function checkForMarkOrHeader(raw) {
-    // let dv = new DataView(raw)
-    let offset = 4;
-    //let t = dv.getUint32(offset, true); // little endian
-    let t = new Uint32Array(raw, offset, 1)[0]; // little endian
-    if (t > 0) {
-      /* Check if mark, unmark, header, etc... */
-      // let b = dv.getUint8(offset)
-      let b = new Uint8Array(raw, offset, 1)[0];
-      let index = offset;
-      do {
-        // if (b != dv.getUint8(index)) {
-        if (b != new Uint8Array(raw, index, 1)[0]) {
-          break;
-        }
-        index++;
-      } while (index < offset + 32);
-      if (index == offset + 32) {
-        t = -1; // found a tag 
-        console.log(" found tag");
-      } else {}
-      // check if first 4 bytes > 0, it is a timestamp
-      if (t > 0) {
-        return false;
-      } else {
-        return true;
-      }
-    }
-  }
-
-  function raw2row(raw) {
-    let parsed = rawRecentToData(raw)
-    let iqr_threshold = 100;
-    let row = {}
-    row.timestamp = new Date(parsed.minute * 60 * 1000).toLocaleString();
-    row.sound = 2048;
-    // console.log(parsed)
-    let uSound = parsed.usound_data
-    if (uSound.n > 10) {
-      if (uSound.left_iqr < iqr_threshold) row.sound = uSound.left;
-      if (uSound.right_iqr < iqr_threshold) row.sound = (uSound.right < row.sound) ?
-        uSound.right : row.sound;
-    }
-
-    if (row.sound == 2048) {
-      row.sound = 'NaN';
-    } else {
-      row.sound -= 50;
-      row.sound *= 192 / 19e6 *
-        343;
-      row.sound = row.sound.toFixed(2);
-    }
-
-    let rssi = parsed.rssi_values
-    row.rssi = rssi.reduce((acc, data) => acc + data, 0)
-    let num = rssi.reduce((acc, data) => (data != 0) ? acc + 1 : acc, 0);
-    row.rssi = (row.rssi/num).toFixed(1)
-    return row;
-  }
-
   async function recentData(tableData) {
     assertConnection()
 
@@ -340,15 +280,17 @@ function Controller(){
           CHARACTERISTICS.data
         )
         notifyCallback = noop;
+        console.log("finished fetch recent");
         // row.timestamp = "today"
         // row.sound = local.length
         // console.log(local)
-        // console.log(local.length)
+        console.log(local.length)
         // row.rssi = -1
         // tableData.push(row)
         doneRecent = true;
       } else {
         local.push(res);
+        // console.log(checkForMarkOrHeader(res));
         tableData.push(raw2row(res));
       }
     }

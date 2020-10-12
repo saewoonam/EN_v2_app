@@ -223,3 +223,62 @@ export function bytesToCsv(raw) {
   rows.unshift(header)
   return convertToCsv(rows)
 }
+
+export function checkForMarkOrHeader(raw) {
+    let dv = new DataView(raw)
+    let offset = 4;
+    let t = dv.getUint32(offset, true); // little endian
+    if (t > 0) {
+      /* Check if mark, unmark, header, etc... */
+      let b = dv.getUint8(offset)
+      let index = offset;
+      do {
+        if (b != dv.getUint8(index)) {
+          break;
+        }
+        index++;
+      } while (index < offset + 32);
+      if (index == offset + 32) {
+        t = -1; // found a tag 
+        console.log(" found tag");
+      } else {}
+      // check if first 4 bytes > 0, it is a timestamp
+      if (t > 0) {
+        return false;
+      } else {
+        return true;
+      }
+    }
+  }
+
+export function raw2row(raw) {
+    let parsed = rawRecentToData(raw)
+    let iqr_threshold = 100;
+    let row = {}
+    row.timestamp = new Date(parsed.minute * 60 * 1000).toLocaleString();
+    row.sound = 2048;
+    // console.log(parsed)
+    let uSound = parsed.usound_data
+    if (uSound.n > 10) {
+      if (uSound.left_iqr < iqr_threshold) row.sound = uSound.left;
+      if (uSound.right_iqr < iqr_threshold) row.sound = (uSound.right < row.sound) ?
+        uSound.right : row.sound;
+    }
+
+    if (row.sound == 2048) {
+      row.sound = 'NaN';
+    } else {
+      row.sound -= 50;
+      row.sound *= 192 / 19e6 *
+        343;
+      row.sound = row.sound.toFixed(2);
+    }
+
+    let rssi = parsed.rssi_values
+    row.rssi = rssi.reduce((acc, data) => acc + data, 0)
+    let num = rssi.reduce((acc, data) => (data != 0) ? acc + 1 : acc, 0);
+    row.rssi = (row.rssi/num).toFixed(1)
+    return row;
+  }
+
+

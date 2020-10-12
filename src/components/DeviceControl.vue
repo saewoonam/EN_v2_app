@@ -169,9 +169,6 @@ export default {
       this.busy = true
       this.deviceName = this.$dongle.getDeviceName()
       await this.fetchState()
-      if ((this.status & (1<<2)) == 4) {
-        await this.$dongle.syncClock()
-      }
       this.busy = false
     }
     const disconnected = () => {}
@@ -193,7 +190,6 @@ export default {
       // await this.checkFlashUsage()
       await this.getMemoryUsage()
       await this.getUptime()
-      // await this.getUptimeB()
     },
 
     disconnect(){
@@ -231,13 +227,12 @@ export default {
     getUptime(){
       return this.$dongle.sendCommand('getUptime').then((used) => {
         this.uptime = [used[0], used[1]]
+        if ((this.status & (1<<2)) == 4) {
+          this.$dongle.syncClock(this.uptime)
+        }
+
       })
       .catch(err => this.onError(err))
-    },
-
-    getUptimeB() {
-      return this.$dongle.getUptimeB(this.uptime)
-        .catch(err => this.onError(err))
     },
 
     toggleFlash(){

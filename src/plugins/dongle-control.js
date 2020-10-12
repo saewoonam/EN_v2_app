@@ -221,46 +221,56 @@ function Controller(){
     await sendCommand('setName')
   }
 
-  async function getUptimeB(uptime) {
-    console.log("in get uptimeB")
-    let handleNotification = function(res){
-      ble.stopNotification(
-        connection.id,
-        SERVICE_UUID,
-        CHARACTERISTICS.data
-      )
-      let time = new Uint32Array(res)
-      uptime[0] = time[0]
-      uptime[1] = time[1]
-      done = true;
-    }
-    ble.startNotification(
-      connection.id,
-      SERVICE_UUID,
-      CHARACTERISTICS.data,
-      handleNotification
-    )
-    await sendCommand('getUptimeB')
+  function delay (delay_ms) {
+    return new Promise((resolve, reject) => {
+
+      let wait = setTimeout(() => {
+        clearTimeout(wait);
+        app.log('delay');
+        resolve("done waiting");
+      }, delay_ms)
+    });
   }
 
-  async function syncClock(){
+  async function syncClock(uptime){
     assertConnection()
-
-    let uptime = await sendCommand('getUptime')
     let value = new Uint32Array(3)
     value[0] = parseInt((new Date()).getTime() / 1000)
     value[1] = uptime[0]
     value[2] = uptime[1]
-    // send clock info before set clock command
-    await ble.withPromises.writeWithoutResponse(
-      connection.id,
-      SERVICE_UUID,
-      CHARACTERISTICS.data,
-      value.buffer
-    )
-    //  tell device to uses info in data buffer to set clock
-    await sendCommand('setClock')
+    setTimeout(async function() {
+      await ble.withPromises.writeWithoutResponse(
+        connection.id,
+        SERVICE_UUID,
+        CHARACTERISTICS.data,
+        value.buffer
+      )
+      await sendCommand('setClock')
+    }, 75);
   }
+
+  // async function syncClock_orig(){
+  //   assertConnection()
+  //   console.log("try to getUptime for syncClock")
+  //   let uptime
+  //   setTimeout(async function() {
+  //     uptime = await sendCommand('getUptime')
+  //     console.log("after try uptime", uptime[0], uptime[1]);
+  //     let value = new Uint32Array(3)
+  //     value[0] = parseInt((new Date()).getTime() / 1000)
+  //     value[1] = uptime[0]
+  //     value[2] = uptime[1]
+  //     setTimeout(async function() {
+  //       await ble.withPromises.writeWithoutResponse(
+  //         connection.id,
+  //         SERVICE_UUID,
+  //         CHARACTERISTICS.data,
+  //         value.buffer
+  //       )
+  //       await sendCommand('setClock')
+  //     }, 75);
+  //   }, 50);
+  // }
 
   async function recentData(tableData) {
     assertConnection()
@@ -436,7 +446,6 @@ function Controller(){
     sendCommand,
     setName,
     syncClock,
-    getUptimeB,
     recentData,
     getDataRecent,
     fetchData,

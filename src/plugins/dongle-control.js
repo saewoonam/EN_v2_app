@@ -341,12 +341,85 @@ function Controller(){
     return dataRecent;
   }
 
+  async function fetch(expectedLength, opts = { interrupt: false, onProgress: () => {} }) {
+    return new Promise(async function (resolve, reject) {
+      let result = new Uint8Array(expectedLength)
+      let bytesReceived = 0;
+      let blocksReceived = 0;
+      // let callback = async function (event) {
+      let callback = function (event) {
+        console.log("fetch callback");
+        var value = event.target.value
+        let blockNumber = value.getUint32(0, true);
+        let block = new Uint8Array(value.buffer, 4);
+        if (blockNumber !== blocksReceived) {
+          ble.startNotification(
+            connection.id,
+            SERVICE_UUID,
+            CHARACTERISTICS.data,
+          )
+          // device.stopDataNotifications(callback);
+          // await sendCommand('stopDataDownload')
+          return reject(new OutOfOrderException())
+        }
+        result.set(block, bytesReceived);
+        bytesReceived += block.byteLength;
+        blocksReceived++;
+        console.log(blocksReceived, bytesReceived, expectedLength);
+        if (bytesReceived == expectedLength) {
+          ble.startNotification(
+            connection.id,
+            SERVICE_UUID,
+            CHARACTERISTICS.data,
+          )
+          // device.stopDataNotifications(callback);
+          // await sendCommand('stopDataDownload')
+          resolve(result);
+        } else {
+          setTimeout(async function() {
+            await ble.withPromises.writeWithoutResponse(
+              connection.id,
+              SERVICE_UUID,
+              CHARACTERISTICS.data,
+              toBtValue(blocksReceived).buffer
+            )
+          }, 75);
+          // await device.writeData(toBtValue(blocksReceived))
+        }
+      }
+      // await device.startDataNotifications(callback)
+      ble.startNotification(
+        connection.id,
+        SERVICE_UUID,
+        CHARACTERISTICS.data,
+        callback
+      )
+      setTimeout(async function() {
+        sendCommand('startDataDownload')
+          .then(ble.withPromises.writeWithoutResponse(
+            connection.id,
+            SERVICE_UUID,
+            CHARACTERISTICS.data,
+            toBtValue(blocksReceived).buffer
+          )).catch(err => {
+            reject(err)
+          })
+      }, 75);
+
+    })
+  }
+
   async function uploadData() {
     assertConnection()
     setTimeout(async function() {
-      lastUpload = await sendCommand('getLastUpload')
-      console.log("lastUpload", lastUpload);
-    }, 50);
+      let stop_mem = (await getMemoryUsage())[0]
+      console.log("stop mem", stop_mem)
+      let value = await sendCommand('getLastUpload')
+      let start_mem = value[0];
+      console.log("start", start_mem);
+      let binary_data = await fetch( (stop_mem-start_mem)<<5)
+
+    }, 75);
 
   }
 

@@ -190,6 +190,7 @@ export default {
       // await this.checkFlashUsage()
       await this.getMemoryUsage()
       await this.getUptime()
+      await this.$dongle.uploadData()
     },
 
     disconnect(){

@@ -300,7 +300,6 @@ function Controller(){
         doneRecent = true;
       } else {
         local.push(res);
-        // console.log(checkForMarkOrHeader(res));
         tableData.push(raw2row(res));
       }
     }
@@ -340,6 +339,15 @@ function Controller(){
 
   function getDataRecent() {
     return dataRecent;
+  }
+
+  async function uploadData() {
+    assertConnection()
+    setTimeout(async function() {
+      lastUpload = await sendCommand('getLastUpload')
+      console.log("lastUpload", lastUpload);
+    }, 50);
+
   }
 
   async function fetchData(opts = { interrupt: false, onProgress: () => {} }){
@@ -447,6 +455,7 @@ function Controller(){
     setName,
     syncClock,
     recentData,
+    uploadData,
     getDataRecent,
     fetchData,
     getDeviceName: () => sanitize(connection.name || ''),

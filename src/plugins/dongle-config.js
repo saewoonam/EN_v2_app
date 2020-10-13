@@ -20,8 +20,9 @@ export const COMMANDS = Object.freeze({
     notify: true,
     returnType: Uint32Array
   },
-  getUptimeB: {
-    value: 'A',
+  getLastUpload: {
+    value: 'g',
+    notify: true,
     returnType: Uint32Array
   },
   setClock: {

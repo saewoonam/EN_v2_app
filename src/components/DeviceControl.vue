@@ -52,7 +52,8 @@
 
     <b-field grouped position="is-centered" class="block">
       <div class="control">
-        <b-button size="is-medium" @click="syncWithServer" v-if="progress === 0">Upload</b-button>
+        <b-button size="is-medium" @click="upload" v-if="progress === 0">Upload</b-button>
+        <!-- <b&#45;button size="is&#45;medium" @click="syncWithServer" v&#45;if="progress === 0">Upload</b&#45;button> -->
         <b-button size="is-medium" type="is-danger" @click="cancelDataFetch" v-else>
           <b-icon
             icon="sync"
@@ -190,7 +191,7 @@ export default {
       // await this.checkFlashUsage()
       await this.getMemoryUsage()
       await this.getUptime()
-      await this.$dongle.uploadData()
+      // await this.$dongle.uploadData()
     },
 
     disconnect(){
@@ -324,6 +325,15 @@ export default {
       this.encounterData = data
 
       this.feedback('Synched with server', 'is-success')
+    },
+
+    async upload() {
+        try {
+            await this.$dongle.uploadData()
+        } catch (err) {
+            console.log("vue error catch", err);
+            this.onError(err);
+        }
     },
 
     async fetchData(){

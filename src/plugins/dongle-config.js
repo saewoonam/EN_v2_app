@@ -27,46 +27,52 @@ export const COMMANDS = Object.freeze({
   },
   setClock: {
     value: 'O',
+    notify: false,
     returnType: Uint8Array
   },
   startWritingToFlash: {
     value: 'w',
+    notify: false,
     returnType: Uint8Array
   },
   stopWritingToFlash: {
     value: 's',
+    notify: false,
     returnType: Uint8Array
   },
   setName: {
     value: 'N',
+    notify: false,
     returnType: Uint8Array
   },
   recordPrimaryEncounterEvent: {
     value: 'M',
+    notify: false,
     returnType: Uint8Array
   },
   recordSecondaryEncounterEvent: {
     value: 'U',
+    notify: false,
     returnType: Uint8Array
   },
   recentData: {
     value: 'e',
+    notify: false,
     returnType: Uint8Array
   },
   startDataDownload: {
     value: 'f',
-    returnType: Uint8Array
-  },
-  startDataDownload: {
-    value: 'f',
+    notify: false,
     returnType: Uint8Array
   },
   stopDataDownload: {
     value: 'F',
+    notify: false,
     returnType: Uint8Array
   },
   eraseFlash: {
     value: 'C',
+    notify: false,
     returnType: Uint8Array
   }
 })

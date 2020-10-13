@@ -92,7 +92,8 @@ export default {
 
         this.devices.push(device)
       }
-      ble.scan([], 5, discover, this.onError.bind(this));
+      ble.scan(['7b183224-9168-443e-a927-7aeea07e8105'], 5, discover, this.onError.bind(this));
+      // ble.scan([], 5, discover, this.onError.bind(this));
     },
     onError(e){
       this.$emit('error', e)

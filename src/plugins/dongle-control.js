@@ -139,25 +139,23 @@ function Controller(){
 
     return new Promise((resolve, reject) => {
       assertConnection()
-
-      let timeout = setTimeout(() => {
-        ble.stopNotification(
-          connection.id,
-          SERVICE_UUID,
-          CHARACTERISTICS.data
-        )
-        notifyCallback = noop
-        reject(new Error('Command timed out before receiving response via notify'))
-      }, COMMAND_TIMEOUT)
+      console.log("command", name, command.notify);
+      let timeout
+      if (command.notify) {
+        timeout = setTimeout(() => {
+          console.log("timeout stop notification");
+          stopNotifications()
+          notifyCallback = noop
+          reject(new Error('Command timed out before receiving response via notify'))
+        }, COMMAND_TIMEOUT)
+      }
 
       function done(res) {
-        clearTimeout(timeout)
-        ble.stopNotification(
-          connection.id,
-          SERVICE_UUID,
-          CHARACTERISTICS.data
-        )
-
+        if (command.notify) {
+          clearTimeout(timeout)
+          console.log("done stop notification");
+          stopNotifications()
+        }
         try {
           let data = res ?
             new command.returnType(res) :
@@ -169,12 +167,7 @@ function Controller(){
       }
 
       if (command.notify){
-        ble.startNotification(
-          connection.id,
-          SERVICE_UUID,
-          CHARACTERISTICS.data,
-          done
-        )
+        startNotifications(done)
       }
 
       ble.withPromises.write(
@@ -184,16 +177,15 @@ function Controller(){
         toBtValue(command.value).buffer
       ).then(res => {
         if (!command.notify){
-          done(res)
+          resolve(res)
         }
       }).catch(err => {
-        ble.stopNotification(
-          connection.id,
-          SERVICE_UUID,
-          CHARACTERISTICS.data
-        )
+        if (command.notify) {
+          console.log("error stop notification");
+          stopNotifications()
+        }
         notifyCallback = noop
-        console.log("Error trying to send: ", command.value)
+        console.log("Error trying to send: ", command.value, err)
         reject(err)
       })
 
@@ -221,12 +213,12 @@ function Controller(){
     await sendCommand('setName')
   }
 
-  function delay (delay_ms) {
+  function delay (cmd, delay_ms) {
     return new Promise((resolve, reject) => {
 
       let wait = setTimeout(() => {
         clearTimeout(wait);
-        app.log('delay');
+        cmd();
         resolve("done waiting");
       }, delay_ms)
     });
@@ -341,59 +333,79 @@ function Controller(){
     return dataRecent;
   }
 
-  async function fetch(expectedLength, opts = { interrupt: false, onProgress: () => {} }) {
-    return new Promise(async function (resolve, reject) {
-      let result = new Uint8Array(expectedLength)
-      let bytesReceived = 0;
-      let blocksReceived = 0;
-      // let callback = async function (event) {
-      let callback = function (event) {
-        console.log("fetch callback");
-        var value = event.target.value
-        let blockNumber = value.getUint32(0, true);
-        let block = new Uint8Array(value.buffer, 4);
-        if (blockNumber !== blocksReceived) {
-          ble.startNotification(
-            connection.id,
-            SERVICE_UUID,
-            CHARACTERISTICS.data,
-          )
-          // device.stopDataNotifications(callback);
-          // await sendCommand('stopDataDownload')
-          return reject(new OutOfOrderException())
-        }
-        result.set(block, bytesReceived);
-        bytesReceived += block.byteLength;
-        blocksReceived++;
-        console.log(blocksReceived, bytesReceived, expectedLength);
-        if (bytesReceived == expectedLength) {
-          ble.startNotification(
-            connection.id,
-            SERVICE_UUID,
-            CHARACTERISTICS.data,
-          )
-          // device.stopDataNotifications(callback);
-          // await sendCommand('stopDataDownload')
-          resolve(result);
-        } else {
-          setTimeout(async function() {
-            await ble.withPromises.writeWithoutResponse(
-              connection.id,
-              SERVICE_UUID,
-              CHARACTERISTICS.data,
-              toBtValue(blocksReceived).buffer
-            )
-          }, 75);
-          // await device.writeData(toBtValue(blocksReceived))
-        }
-      }
-      // await device.startDataNotifications(callback)
+  function stopNotifications() {
+    ble.stopNotification(
+      connection.id,
+      SERVICE_UUID,
+      CHARACTERISTICS.data,
+    )
+  }
+
+  function startNotifications(callback) {
       ble.startNotification(
         connection.id,
         SERVICE_UUID,
         CHARACTERISTICS.data,
         callback
       )
+  }
+
+  async function fetch(expectedLength, opts = { interrupt: false, onProgress: () => {} }) {
+    return new Promise(async function (resolve, reject) {
+      let result = new Uint8Array(expectedLength)
+      let bytesReceived = 0;
+      let blocksReceived = 0;
+      // let callback = async function (event) {
+      let callback = function (res) {
+        // console.log("fetch callback", res);
+        var value = new DataView(res)
+        let blockNumber = value.getUint32(0, true);
+        let block = new Uint8Array(value.buffer, 4);
+        // console.log(blockNumber, block);
+        if (blockNumber !== blocksReceived) {
+          stopNotifications()
+          // device.stopDataNotifications(callback);
+          // sendCommand('stopDataDownload')
+          //   .catch(err => {
+          //     reject(err)
+          //   })
+          reject(new OutOfOrderException())
+        }
+        result.set(block, bytesReceived);
+        bytesReceived += block.byteLength;
+        blocksReceived++;
+        console.log(blocksReceived, bytesReceived, expectedLength);
+        if (bytesReceived == expectedLength) {
+          stopNotifications()
+          resolve(result);
+        } else {
+          ble.withPromises.writeWithoutResponse(
+            connection.id,
+            SERVICE_UUID,
+            CHARACTERISTICS.data,
+            toBtValue(blocksReceived).buffer
+          ).catch(err => {
+            reject(err)
+          })
+        }
+      }
+      setTimeout(async function() {
+        console.log("try to set up notification")
+        startNotifications(callback)
+      }, 75);
+      // setTimeout(async function() {
+      //   await sendCommand('startDataDownload')
+      // }, 75);
+      // setTimeout(async function() {
+      //   ble.withPromises.writeWithoutResponse(
+      //     connection.id,
+      //     SERVICE_UUID,
+      //     CHARACTERISTICS.data,
+      //     toBtValue(blocksReceived).buffer
+      //   ).catch(err => {
+      //     reject(err)
+      //   })
+      // }, 75);
       setTimeout(async function() {
         sendCommand('startDataDownload')
           .then(ble.withPromises.writeWithoutResponse(
@@ -405,22 +417,25 @@ function Controller(){
             reject(err)
           })
       }, 75);
-
     })
   }
 
   async function uploadData() {
     assertConnection()
-    setTimeout(async function() {
+      let start_mem = 0;
       let stop_mem = (await getMemoryUsage())[0]
       console.log("stop mem", stop_mem)
-      let value = await sendCommand('getLastUpload')
-      let start_mem = value[0];
+      if (true) {
+       let value = await sendCommand('getLastUpload')
+       start_mem = value[0];
+      }
       console.log("start", start_mem);
+    try {
       let binary_data = await fetch( (stop_mem-start_mem)<<5)
-
-    }, 75);
-
+    } catch (err) {
+      console.log("uploadData catch error", err);
+      throw err
+    }
   }
 
   async function fetchData(opts = { interrupt: false, onProgress: () => {} }){

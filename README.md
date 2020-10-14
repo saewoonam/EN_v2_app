@@ -9,6 +9,7 @@ This is a mobile app that is written with the cordova package to communicate via
 
         cordova platform add android
         cordova plugin add git+https://github.com/rajeshpandalss/cordova-plugin-ble-central.git
+        cordova plugin add https://github.com/8bhsolutions/cordova-plugin-fetch.git
         cordova plugin add cordova-plugin-webpack
         cordova run android
 
@@ -16,6 +17,7 @@ This is a mobile app that is written with the cordova package to communicate via
 
         cordova platform add ios
         cordova plugin add git+https://github.com/rajeshpandalss/cordova-plugin-ble-central.git
+        cordova plugin add https://github.com/8bhsolutions/cordova-plugin-fetch.git
         cordova plugin add cordova-plugin-webpack
         cordova run ios
 

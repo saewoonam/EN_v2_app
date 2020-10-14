@@ -52,7 +52,8 @@
 
     <b-field grouped position="is-centered" class="block">
       <div class="control">
-        <b-button size="is-medium" @click="syncWithServer" v-if="progress === 0">Upload</b-button>
+        <b-button size="is-medium" @click="getEncounters" v-if="progress === 0">Upload</b-button>
+        <!-- <b&#45;button size="is&#45;medium" @click="syncWithServer" v&#45;if="progress === 0">Upload</b&#45;button> -->
         <b-button size="is-medium" type="is-danger" @click="cancelDataFetch" v-else>
           <b-icon
             icon="sync"
@@ -164,14 +165,11 @@ export default {
   },
 
   mounted(){
-
+    console.log("in mounted device control");
     const connected = async () => {
       this.busy = true
       this.deviceName = this.$dongle.getDeviceName()
       await this.fetchState()
-      if ((this.status & (1<<2)) == 4) {
-        await this.$dongle.syncClock()
-      }
       this.busy = false
     }
     const disconnected = () => {}
@@ -190,7 +188,7 @@ export default {
   methods: {
     async fetchState(){
       await this.checkBattery()
-      await this.checkFlashUsage()
+      // await this.checkFlashUsage()
       await this.getMemoryUsage()
       await this.getUptime()
     },
@@ -230,6 +228,10 @@ export default {
     getUptime(){
       return this.$dongle.sendCommand('getUptime').then((used) => {
         this.uptime = [used[0], used[1]]
+        if ((this.status & (1<<2)) == 4) {
+          this.$dongle.syncClock(this.uptime)
+        }
+
       })
       .catch(err => this.onError(err))
     },
@@ -278,29 +280,14 @@ export default {
     },
 
     async recentData() {
-      // put recent data in a table here.
-      // this.encounterData = [{
-      //   encounterId: '034045-34-5-43-45--3465'
-      // }]
-
-      // this.encounterData = []
-      // let row = {}
-      // row.timestamp = "today"
-      // row.sound = "2.0"
-      // row.rssi = "-10.0"
-      // this.encounterData.push(row);
-
-      // this.encounterData = this.$dongle.recentData()
-
-      // try {
-      //   this.$dongle.recentData()
-      // } catch(e) {
-      //   this.onError(e)
-      // }
-      // this.encounterData = this.$dongle.getDataRecent()
-      this.encounterData = []
-      this.$dongle.recentData(this.encounterData)
-        .catch(err => this.onError(err))
+      try {
+        this.encounterData = await this.$dongle.fetchRecentData()
+        if (!this.encounterData.length){
+          this.feedback('No recent encounters')
+        }
+      } catch (err){
+        this.onError(err)
+      }
     },
 
     cancelDataFetch(){
@@ -310,20 +297,7 @@ export default {
       this.progress = 0
     },
 
-    async syncWithServer(){
-      let data = await this.fetchData()
-
-      if (!data){ return }
-
-      await this.sendDataToServer(data).catch(e => this.onError(e))
-      this.encounterData = data
-
-      this.feedback('Synched with server', 'is-success')
-    },
-
-    async fetchData(){
-      this.cancelDataFetch()
-
+    async getEncounters() {
       try {
         this._dataFetchInterrupt = {
           interrupt: false,
@@ -331,14 +305,19 @@ export default {
             this.progress = received / expected * 100
           }
         }
-
         let data = await this.$dongle.fetchData(this._dataFetchInterrupt)
-        return bytesToData(data)
-      } catch (e){
-        if (e instanceof InterruptException){
+        if (data.length){
+          await this.sendDataToServer(data)
+        }
+        this.feedback('Synched with server', 'is-success')
+        // Send command to mark flash to device
+        // this.$dongle.sendCommand('markFlashUpload')
+
+      } catch (err) {
+        if (err instanceof InterruptException){
           // no action
         } else {
-          this.onError(e)
+          this.onError(err)
         }
       } finally {
         this.progress = 0
@@ -346,6 +325,8 @@ export default {
     },
 
     async sendDataToServer(data){
+      // this.progress = 1
+      console.log("sendDataToServer")
       let encounters = data.map(d => {
         return {
           encounterId: d.encounterId,
@@ -360,19 +341,34 @@ export default {
         let batch = batches[b] = batches[b] || []
         batch.push(encounters[i])
       }
+      let count = 0;
+      console.log("Length of batches", batches.length);
       for (let batch of batches){
-        let response = await fetch(SERVER_SYNC_URL, {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify({ encounters: batch })
-        })
-        let res = await response.json()
-        if (res.errors.length){
-          throw new Error('Server Error: ' + res.errors[0].message)
-        }
+        let sent = false;
+        let res;
+        do {
+          let response = await fetch(SERVER_SYNC_URL, {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({ encounters: batch })
+          }).catch(e => console.log("fetch error", e))
+          res = await response.json()
+          // console.log("got response", res)
+          if (res.errors.length){
+            console.log("upload error", res.errors)
+            // throw new Error('Server Error: ' + res.errors[0].message)
+          } else {
+            sent = true;
+          }
+        } while (!sent)
+        count ++;
+        console.log("count: ", count, res);
+        this.progress = count / batches.length * 100;
       }
+      this.progress = 0
+      console.log("sendDataToServer end");
     },
 
     onError(e){

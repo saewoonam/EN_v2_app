@@ -416,13 +416,11 @@ function Controller(){
     return data_to_server
   }
 
-
   return {
     connect,
     disconnect,
     getMemoryUsage,
     getBatteryLevel,
-    sendCommand,
     setName,
     syncClock,
     recentData,

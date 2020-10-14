@@ -350,6 +350,15 @@ function Controller(){
       )
   }
 
+  // async function timeoutPromise(interval, callback) {
+  //   return new Promise(async function(resolve, reject) {
+  //     setTimeout(function(){
+  //       startNotifications(callback)
+  //       resolve("done");
+  //     }, interval);
+  //   });
+  // }
+
   async function fetch(expectedLength, opts = { interrupt: false, onProgress: () => {} }) {
     return new Promise(async function (resolve, reject) {
       let result = new Uint8Array(expectedLength)

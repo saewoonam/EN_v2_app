@@ -84,25 +84,6 @@ function Controller(){
       )
     })
   }
-  //
-  // async function subscribe(callback){
-  //   assertConnection()
-  //   ble.startNotification(
-  //     connection.id,
-  //     SERVICE_UUID,
-  //     CHARACTERISTICS.data,
-  //     callback
-  //   )
-  // }
-  //
-  // async function unsubscribe(){
-  //   assertConnection()
-  //   await ble.withPromises.stopNotification(
-  //     connection.id,
-  //     SERVICE_UUID,
-  //     CHARACTERISTICS.data
-  //   )
-  // }
 
   async function getMemoryUsage(){
     assertConnection()
@@ -215,17 +196,6 @@ function Controller(){
     await sendCommand('setName')
   }
 
-  function delay (cmd, delay_ms) {
-    return new Promise((resolve, reject) => {
-
-      let wait = setTimeout(() => {
-        clearTimeout(wait);
-        cmd();
-        resolve("done waiting");
-      }, delay_ms)
-    });
-  }
-
   async function syncClock(uptime){
     assertConnection()
     let value = new Uint32Array(3)
@@ -242,29 +212,6 @@ function Controller(){
       await sendCommand('setClock')
     }, 75);
   }
-
-  // async function syncClock_orig(){
-  //   assertConnection()
-  //   console.log("try to getUptime for syncClock")
-  //   let uptime
-  //   setTimeout(async function() {
-  //     uptime = await sendCommand('getUptime')
-  //     console.log("after try uptime", uptime[0], uptime[1]);
-  //     let value = new Uint32Array(3)
-  //     value[0] = parseInt((new Date()).getTime() / 1000)
-  //     value[1] = uptime[0]
-  //     value[2] = uptime[1]
-  //     setTimeout(async function() {
-  //       await ble.withPromises.writeWithoutResponse(
-  //         connection.id,
-  //         SERVICE_UUID,
-  //         CHARACTERISTICS.data,
-  //         value.buffer
-  //       )
-  //       await sendCommand('setClock')
-  //     }, 75);
-  //   }, 50);
-  // }
 
   async function recentData(tableData) {
     assertConnection()
@@ -297,42 +244,19 @@ function Controller(){
         tableData.push(raw2row(res));
       }
     }
-    // notifyCallback = handleCmde
-
-    // await unsubscribe();
-    // ble.stopNotification(
-    //   connection.id,
-    //   SERVICE_UUID,
-    //   CHARACTERISTICS.data
-    // )
     ble.startNotification(
       connection.id,
       SERVICE_UUID,
       CHARACTERISTICS.data,
       handleCmde
     )
-    if (true) {
-      try {
-        await sendCommand('recentData')
-      } catch (err){
-        console.log("error in trying to send recentData")
-        throw err
-      }
-    } else {
-
-      let cmd = "e"
-      ble.write(
-        connection.id,
-        SERVICE_UUID,
-        CHARACTERISTICS.rw,
-        toBtValue(cmd).buffer
-      )
+    try {
+      await sendCommand('recentData')
+    } catch (err){
+      console.log("error in trying to send recentData")
+      throw err
     }
 
-  }
-
-  function getDataRecent() {
-    return dataRecent;
   }
 
   function stopNotifications() {
@@ -353,12 +277,13 @@ function Controller(){
   }
 
   async function startNPromise(callback=noop, interval=75) {
-    ble.startNotification(
-      connection.id,
-      SERVICE_UUID,
-      CHARACTERISTICS.data,
-      callback
-    )
+    // ble.startNotification(
+    //   connection.id,
+    //   SERVICE_UUID,
+    //   CHARACTERISTICS.data,
+    //   callback
+    // )
+    startNotifications(callback)
     return new Promise(async function(resolve, reject) {
       setTimeout(function(){
         resolve("done");
@@ -367,11 +292,12 @@ function Controller(){
   }
 
   async function stopNPromise(interval=75) {
-    ble.stopNotification(
-      connection.id,
-      SERVICE_UUID,
-      CHARACTERISTICS.data
-    )
+    // ble.stopNotification(
+    //   connection.id,
+    //   SERVICE_UUID,
+    //   CHARACTERISTICS.data
+    // )
+    stopNotifications();
     return new Promise(async function(resolve, reject) {
       setTimeout(function(){
         resolve("done");
@@ -403,12 +329,6 @@ function Controller(){
               console.log("fetch interrupted")
               reject(new InterruptException())
             })
-          // stopNotifications()
-          // setTimeout(async function() {
-          //   await sendCommand('stopDataDownload')
-          //   console.log("fetch interrupted")
-          //   reject(new InterruptException())
-          // }, 75);
         }
         result.set(block, bytesReceived);
         bytesReceived += block.byteLength;
@@ -418,11 +338,6 @@ function Controller(){
           opts.onProgress(bytesReceived, expectedLength)
         }
         if (bytesReceived == expectedLength) {
-          // stopNotifications()
-          // setTimeout(async function() {
-          //   await sendCommand('stopDataDownload')
-          //   resolve(result);
-          // }, 75);
           stopNPromise()
             .then(async function() {
               await sendCommand('stopDataDownload')
@@ -435,25 +350,16 @@ function Controller(){
             CHARACTERISTICS.data,
             toBtValue(blocksReceived).buffer
           ).catch(err => {
-            // stopNPromise()
-            //   .then(async function() {
-            //     await sendCommand('stopDataDownload')
-                console.log("catch error in write", err, opts.interrupt);
-                if (opts.interrupt) { // this is a hack to change err to interrupt
-                  reject(new InterruptException())
-                } else {
-                  reject(err)
-                }
-              // })
+            console.log("catch error in write", err, opts.interrupt);
+            if (opts.interrupt) { // this is a hack to change err to interrupt
+              reject(new InterruptException())
+            } else {
+              reject(err)
+            }
           })
         }
       }
       /*  need to pause here, otheriwse startNotifications doesn't work */
-      // setTimeout(async function() {
-      //   console.log("try to set up notification")
-      //   startNotifications(callback)
-      // }, 75);
-      /*  Also need to pause again, otherwise doesn't work */
       setTimeout(async function() {
         startNPromise(callback)
           .then(sendCommand('startDataDownload'))
@@ -474,11 +380,9 @@ function Controller(){
     await sendCommand('startLastUpload')
     let start_mem = 0;
     let stop_mem = (await getMemoryUsage())[0]
-    console.log("stop mem", stop_mem)
     /* get start_mem has to come after getMemoryUssage, otherwise error */
     let value = await sendCommand('getLastUpload')
     start_mem = value[0];
-    console.log("start", start_mem);
     let binary_data;
     try {
       binary_data = await fetch( (stop_mem-start_mem)<<5, opts)
@@ -512,101 +416,6 @@ function Controller(){
     return data_to_server
   }
 
-  async function fetchData(opts = { interrupt: false, onProgress: () => {} }){
-    assertConnection()
-
-    const blocksTotal = (await getMemoryUsage())[0]
-    const blockSize = 32
-    const expectedLength = blocksTotal * blockSize
-
-    let blocksReceived = 0
-    let bytesReceived = 0
-    let expectedMTUSize = 0
-    let result = new Uint8Array(expectedLength)
-
-    // console.log('expecting bytes', expectedLength)
-
-    function nextBlock(){
-      return new Promise((resolve, reject) => {
-        let interval = setInterval(() => {
-          if (opts.interrupt){
-            clearInterval(interval)
-            notifyCallback = noop;
-            reject(new InterruptException())
-          }
-        }, 1000)
-        notifyCallback = (res) => {
-          let blockNumber = new Uint32Array(res, 0, 1)[0]
-          let block = new Uint8Array(res, 4)
-
-          // console.log(blockNumber, block.byteLength, block)
-
-          if (block.byteLength === 0){
-            // drop value
-            blocksReceived++
-            return resolve(false)
-          }
-
-          if (blockNumber !== blocksReceived){
-            return reject(new OutOfOrderException())
-          }
-
-          if (!expectedMTUSize){
-            expectedMTUSize = block.byteLength
-          }
-
-          // if (block.byteLength !== expectedMTUSize){
-          //   return reject(new Error('Incorrect block size received'))
-          // }
-
-          result.set(block, bytesReceived)
-          notifyCallback = noop
-          bytesReceived += block.byteLength
-          blocksReceived++
-          resolve(true)
-        }
-
-        ble.withPromises.writeWithoutResponse(
-          connection.id,
-          SERVICE_UUID,
-          CHARACTERISTICS.data_req,
-          toBtValue(blocksReceived).buffer
-        ).catch(err => {
-          reject(err)
-        })
-      })
-    }
-
-    try {
-      await sendCommand('startDataDownload')
-
-      while(bytesReceived < expectedLength){
-        if (opts.interrupt){
-          throw new InterruptException()
-        }
-
-        try {
-          await nextBlock()
-        } catch (e){
-          throw e
-          // if it's out of order block, try again
-          // if (!(e instanceof OutOfOrderException)){
-          //   throw e
-          // }
-        }
-        if (opts.onProgress){
-          opts.onProgress(bytesReceived, expectedLength)
-        }
-      }
-
-    } catch (err){
-      throw err
-    } finally {
-      await sendCommand('stopDataDownload')
-    }
-
-    return result
-  }
 
   return {
     connect,
@@ -618,8 +427,6 @@ function Controller(){
     syncClock,
     recentData,
     uploadData,
-    getDataRecent,
-    fetchData,
     getDeviceName: () => sanitize(connection.name || ''),
     isConnected: () => !!connection,
     on: pubsub.$on.bind(pubsub),

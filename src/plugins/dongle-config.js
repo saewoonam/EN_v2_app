@@ -68,7 +68,7 @@ export const COMMANDS = Object.freeze({
   recentData: {
     value: 'e',
     notify: false,
-    returnType: Uint8Array
+    returnType: Uint32Array
   },
   startDataDownload: {
     value: 'f',

@@ -52,7 +52,7 @@
 
     <b-field grouped position="is-centered" class="block">
       <div class="control">
-        <b-button size="is-medium" @click="upload" v-if="progress === 0">Upload</b-button>
+        <b-button size="is-medium" @click="getEncounters" v-if="progress === 0">Upload</b-button>
         <!-- <b&#45;button size="is&#45;medium" @click="syncWithServer" v&#45;if="progress === 0">Upload</b&#45;button> -->
         <b-button size="is-medium" type="is-danger" @click="cancelDataFetch" v-else>
           <b-icon
@@ -279,13 +279,15 @@ export default {
       })
     },
 
-    recentData() {
-      this.encounterData = []
-      this.$dongle.recentData(this.encounterData)
-        .catch(err => {
-          console.log("error in try to get recent data")
-          this.onError(err)
-        })
+    async recentData() {
+      try {
+        this.encounterData = await this.$dongle.fetchRecentData()
+        if (!this.encounterData.length){
+          this.feedback('No recent encounters')
+        }
+      } catch (err){
+        this.onError(err)
+      }
     },
 
     cancelDataFetch(){
@@ -295,8 +297,7 @@ export default {
       this.progress = 0
     },
 
-    async upload() {
-      let unsynced_data
+    async getEncounters() {
       try {
         this._dataFetchInterrupt = {
           interrupt: false,
@@ -304,25 +305,23 @@ export default {
             this.progress = received / expected * 100
           }
         }
-        unsynced_data = await this.$dongle.uploadData(this._dataFetchInterrupt)
+        let data = await this.$dongle.fetchData(this._dataFetchInterrupt)
+        if (data.length){
+          await this.sendDataToServer(data)
+        }
+        this.feedback('Synched with server', 'is-success')
+        // Send command to mark flash to device
+        // this.$dongle.sendCommand('markFlashUpload')
+
       } catch (err) {
         if (err instanceof InterruptException){
           // no action
         } else {
-          console.log("vue error catch", err);
           this.onError(err)
         }
       } finally {
         this.progress = 0
       }
-
-      if (!unsynced_data){ return }
-      console.log("upload to server")
-      await this.sendDataToServer(unsynced_data).catch(e => this.onError(e))
-      console.log("finished upload")
-      this.feedback('Synched with server', 'is-success')
-      // Send command to mark flash to device
-      // this.$dongle.sendCommand('markFlashUpload')
     },
 
     async sendDataToServer(data){

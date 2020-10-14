@@ -1,7 +1,7 @@
 import Vue from 'vue'
 import { SERVICE_UUID, CHARACTERISTICS, COMMANDS } from './dongle-config'
 import sanitize from 'sanitize-filename'
-import {raw2row} from '../tools/data-parse'
+import {raw2row, checkForMarkOrHeader, getDataFromView} from '../tools/data-parse'
 
 const COMMAND_TIMEOUT = 5000
 const noop = () => {}
@@ -364,11 +364,6 @@ function Controller(){
         // console.log(blockNumber, block);
         if (blockNumber !== blocksReceived) {
           stopNotifications()
-          // device.stopDataNotifications(callback);
-          // sendCommand('stopDataDownload')
-          //   .catch(err => {
-          //     reject(err)
-          //   })
           reject(new OutOfOrderException())
         }
         result.set(block, bytesReceived);
@@ -389,6 +384,7 @@ function Controller(){
           })
         }
       }
+      /*  need to pause here, otheriwse startNotifications doesn't work */
       setTimeout(async function() {
         console.log("try to set up notification")
         startNotifications(callback)
@@ -406,6 +402,7 @@ function Controller(){
       //     reject(err)
       //   })
       // }, 75);
+      /*  Also need to pause again, otherwise doesn't work */
       setTimeout(async function() {
         sendCommand('startDataDownload')
           .then(ble.withPromises.writeWithoutResponse(
@@ -422,20 +419,44 @@ function Controller(){
 
   async function uploadData() {
     assertConnection()
-      let start_mem = 0;
-      let stop_mem = (await getMemoryUsage())[0]
-      console.log("stop mem", stop_mem)
-      if (true) {
-       let value = await sendCommand('getLastUpload')
-       start_mem = value[0];
-      }
-      console.log("start", start_mem);
+    await sendCommand('startLastUpload')
+    let start_mem = 0;
+    let stop_mem = (await getMemoryUsage())[0]
+    console.log("stop mem", stop_mem)
+    /* get start_mem has to come after getMemoryUssage, otherwise error */
+    let value = await sendCommand('getLastUpload')
+    start_mem = value[0];
+    console.log("start", start_mem);
+    let binary_data;
     try {
-      let binary_data = await fetch( (stop_mem-start_mem)<<5)
+      binary_data = await fetch( (stop_mem-start_mem)<<5)
     } catch (err) {
       console.log("uploadData catch error", err);
       throw err
+    } finally {
+      setTimeout(async function() {
+        await sendCommand('stopDataDownload')
+      }, 75);
     }
+    /* prep data for server, filter out marks and headers */
+    let data_to_server = []
+    for (let offset = 0; offset < binary_data.byteLength; offset += 32) {
+      let chunk = binary_data.slice(offset, offset + 32);
+      let check = checkForMarkOrHeader(chunk.buffer, 0)
+      if (check) {
+        console.log(offset >> 5, chunk.buffer)
+      } else {
+        chunk = binary_data.slice(offset, offset + 64);
+        // console.log("chunk to convert", chunk);
+        let dv = new DataView(chunk.buffer);
+        let row = getDataFromView(dv)
+        data_to_server.push(row)
+        // let row = raw2row(chunk.buffer, 0)
+        // console.log(row);
+        offset += 32;
+      }
+    }
+    console.log("number of entries", data_to_server.length)
   }
 
   async function fetchData(opts = { interrupt: false, onProgress: () => {} }){

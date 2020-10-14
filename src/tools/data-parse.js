@@ -149,7 +149,7 @@ function getCSVData(data) {
   }
 }
 
-function getDataFromView(arrayView) {
+export function getDataFromView(arrayView) {
   let parsed = encounterRecord.read(arrayView)
 
   let tz_offset_ms = new Date().getTimezoneOffset() * 60 * 1000;
@@ -224,32 +224,33 @@ export function bytesToCsv(raw) {
   return convertToCsv(rows)
 }
 
-export function checkForMarkOrHeader(raw) {
+export function checkForMarkOrHeader(raw, offset=4) {
     let dv = new DataView(raw)
-    let offset = 4;
     let t = dv.getUint32(offset, true); // little endian
     if (t > 0) {
-      /* Check if mark, unmark, header, etc... */
-      let b = dv.getUint8(offset)
-      let index = offset;
-      do {
-        if (b != dv.getUint8(index)) {
-          break;
+        /* Check if mark, unmark, header, etc... */
+        let b = dv.getUint8(offset)
+        let index = offset;
+        do {
+            if (b != dv.getUint8(index)) {
+                break;
+            }
+            index++;
+        } while (index < offset + 32);
+        if (index == offset + 32) {
+            t = -1; // found a tag 
+            console.log(" found tag");
+        } else {}
+        // check if first 4 bytes > 0, it is a timestamp
+        if (t > 0) {
+            return false;
+        } else {
+            return true;
         }
-        index++;
-      } while (index < offset + 32);
-      if (index == offset + 32) {
-        t = -1; // found a tag 
-        console.log(" found tag");
-      } else {}
-      // check if first 4 bytes > 0, it is a timestamp
-      if (t > 0) {
-        return false;
-      } else {
+    } else {
         return true;
-      }
     }
-  }
+}
 
 export function raw2row(raw) {
     let parsed = rawRecentToData(raw)

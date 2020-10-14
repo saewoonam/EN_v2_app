@@ -25,6 +25,16 @@ export const COMMANDS = Object.freeze({
     notify: true,
     returnType: Uint32Array
   },
+  startLastUpload: {
+    value: 'G',
+    notify: false,
+    returnType: Uint8Array
+  },
+  markFlashUpload: {
+    value: 'Y',
+    notify: false,
+    returnType: Uint8Array
+  },
   setClock: {
     value: 'O',
     notify: false,

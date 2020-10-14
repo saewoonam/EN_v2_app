@@ -327,24 +327,33 @@ export default {
     },
 
     async upload() {
-        try {
-            this._dataFetchInterrupt = {
-                interrupt: false,
-                onProgress: (received, expected) => {
-                    this.progress = received / expected * 100
-                }
-            }
-            await this.$dongle.uploadData(this._dataFetchInterrupt)
-        } catch (err) {
-            if (err instanceof InterruptException){
-                // no action
-            } else {
-                console.log("vue error catch", err);
-                this.onError(err)
-            }
-        } finally {
-            this.progress = 0
+      let unsynced_data
+      try {
+        this._dataFetchInterrupt = {
+          interrupt: false,
+          onProgress: (received, expected) => {
+            this.progress = received / expected * 100
+          }
         }
+        unsynced_data = await this.$dongle.uploadData(this._dataFetchInterrupt)
+      } catch (err) {
+        if (err instanceof InterruptException){
+          // no action
+        } else {
+          console.log("vue error catch", err);
+          this.onError(err)
+        }
+      } finally {
+        this.progress = 0
+      }
+
+      if (!unsynced_data){ return }
+      console.log("upload to server")
+      await this.sendDataToServer(unsynced_data).catch(e => this.onError(e))
+      console.log("finished upload")
+      this.feedback('Synched with server', 'is-success')
+      // Send command to mark flash to device
+      // this.$dongle.sendCommand('markFlashUpload')
     },
 
     async fetchData(){
@@ -372,6 +381,8 @@ export default {
     },
 
     async sendDataToServer(data){
+      // this.progress = 1
+      console.log("sendDataToServer")
       let encounters = data.map(d => {
         return {
           encounterId: d.encounterId,
@@ -386,19 +397,34 @@ export default {
         let batch = batches[b] = batches[b] || []
         batch.push(encounters[i])
       }
+      let count = 0;
+      console.log("Length of batches", batches.length);
       for (let batch of batches){
-        let response = await fetch(SERVER_SYNC_URL, {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify({ encounters: batch })
-        })
-        let res = await response.json()
-        if (res.errors.length){
-          throw new Error('Server Error: ' + res.errors[0].message)
-        }
+        let sent = false;
+        let res;
+        do {
+          let response = await fetch(SERVER_SYNC_URL, {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({ encounters: batch })
+          }).catch(e => console.log("fetch error", e))
+          res = await response.json()
+          // console.log("got response", res)
+          if (res.errors.length){
+            console.log("upload error", res.errors)
+            // throw new Error('Server Error: ' + res.errors[0].message)
+          } else {
+            sent = true;
+          }
+        } while (!sent)
+        count ++;
+        console.log("count: ", count, res);
+        this.progress = count / batches.length * 100;
       }
+      this.progress = 0
+      console.log("sendDataToServer end");
     },
 
     onError(e){

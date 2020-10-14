@@ -257,6 +257,8 @@ export function raw2row(raw) {
     let iqr_threshold = 100;
     let row = {}
     row.timestamp = new Date(parsed.minute * 60 * 1000).toLocaleString();
+    // remove secoonds from ascii time
+    row.timestamp = row.timestamp.split(":").slice(0,-1).join(':') + row.timestamp.slice(-3)
     row.sound = 2048;
     // console.log(parsed)
     let uSound = parsed.usound_data

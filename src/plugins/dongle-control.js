@@ -154,7 +154,9 @@ function Controller(){
         if (command.notify) {
           clearTimeout(timeout)
           console.log("done stop notification");
-          stopNotifications()
+          // stopNotifications()
+          stopNPromise()
+            .catch(err => reject(err))
         }
         try {
           let data = res ?
@@ -350,26 +352,43 @@ function Controller(){
       )
   }
 
-  // async function timeoutPromise(interval) {
-  //   return new Promise(async function(resolve, reject) {
-  //     setTimeout(function(){
-  //       resolve("done");
-  //     }, interval);
-  //   });
-  // }
+  async function startNPromise(callback=noop, interval=75) {
+    ble.startNotification(
+      connection.id,
+      SERVICE_UUID,
+      CHARACTERISTICS.data,
+      callback
+    )
+    return new Promise(async function(resolve, reject) {
+      setTimeout(function(){
+        resolve("done");
+      }, interval);
+    });
+  }
+
+  async function stopNPromise(interval=75) {
+    ble.stopNotification(
+      connection.id,
+      SERVICE_UUID,
+      CHARACTERISTICS.data
+    )
+    return new Promise(async function(resolve, reject) {
+      setTimeout(function(){
+        resolve("done");
+      }, interval);
+    });
+  }
 
   async function fetch(expectedLength, opts = { interrupt: false, onProgress: () => {} }) {
     return new Promise(async function (resolve, reject) {
       let result = new Uint8Array(expectedLength)
       let bytesReceived = 0;
       let blocksReceived = 0;
-      // let callback = async function (event) {
-      let callback = function (res) {
-        // console.log("fetch callback", res);
+      let callback = async function (res) {
+      // let callback = function (res) {
         var value = new DataView(res)
         let blockNumber = value.getUint32(0, true);
         let block = new Uint8Array(value.buffer, 4);
-        // console.log(blockNumber, block);
         if (blockNumber !== blocksReceived) {
           stopNotifications()
           setTimeout(async function() {
@@ -378,14 +397,18 @@ function Controller(){
           }, 75);
         }
         if (opts.interrupt){
-          stopNotifications()
-          setTimeout(async function() {
-            await sendCommand('stopDataDownload')
-            console.log("fetch interrupted")
-            // reject("interrupted")
-            reject(new InterruptException())
-            // throw new InterruptException()
-          }, 75);
+          stopNPromise()
+            .then(async function() {
+              await sendCommand('stopDataDownload')
+              console.log("fetch interrupted")
+              reject(new InterruptException())
+            })
+          // stopNotifications()
+          // setTimeout(async function() {
+          //   await sendCommand('stopDataDownload')
+          //   console.log("fetch interrupted")
+          //   reject(new InterruptException())
+          // }, 75);
         }
         result.set(block, bytesReceived);
         bytesReceived += block.byteLength;
@@ -395,12 +418,16 @@ function Controller(){
           opts.onProgress(bytesReceived, expectedLength)
         }
         if (bytesReceived == expectedLength) {
-          stopNotifications()
-          setTimeout(async function() {
-            await sendCommand('stopDataDownload')
-            resolve(result);
-          }, 75);
-          // resolve(result);
+          // stopNotifications()
+          // setTimeout(async function() {
+          //   await sendCommand('stopDataDownload')
+          //   resolve(result);
+          // }, 75);
+          stopNPromise()
+            .then(async function() {
+              await sendCommand('stopDataDownload')
+              resolve(result);
+            })
         } else {
           ble.withPromises.writeWithoutResponse(
             connection.id,
@@ -408,32 +435,37 @@ function Controller(){
             CHARACTERISTICS.data,
             toBtValue(blocksReceived).buffer
           ).catch(err => {
-            console.log("catch error in write", err, opts.interrupt);
-            if (opts.interrupt) { // this is a hack to change err to interrupt
-              reject(new InterruptException())
-            } else {
-              reject(err)
-            }
+            // stopNPromise()
+            //   .then(async function() {
+            //     await sendCommand('stopDataDownload')
+                console.log("catch error in write", err, opts.interrupt);
+                if (opts.interrupt) { // this is a hack to change err to interrupt
+                  reject(new InterruptException())
+                } else {
+                  reject(err)
+                }
+              // })
           })
         }
       }
-        /*  need to pause here, otheriwse startNotifications doesn't work */
-        setTimeout(async function() {
-          console.log("try to set up notification")
-          startNotifications(callback)
-        }, 75);
-        /*  Also need to pause again, otherwise doesn't work */
-        setTimeout(async function() {
-          sendCommand('startDataDownload')
-            .then(ble.withPromises.writeWithoutResponse(
-              connection.id,
-              SERVICE_UUID,
-              CHARACTERISTICS.data,
-              toBtValue(blocksReceived).buffer
-            )).catch(err => {
-              reject(err)
-            })
-        }, 75);
+      /*  need to pause here, otheriwse startNotifications doesn't work */
+      // setTimeout(async function() {
+      //   console.log("try to set up notification")
+      //   startNotifications(callback)
+      // }, 75);
+      /*  Also need to pause again, otherwise doesn't work */
+      setTimeout(async function() {
+        startNPromise(callback)
+          .then(sendCommand('startDataDownload'))
+          .then(ble.withPromises.writeWithoutResponse(
+            connection.id,
+            SERVICE_UUID,
+            CHARACTERISTICS.data,
+            toBtValue(blocksReceived).buffer
+          )).catch(err => {
+            reject(err)
+          })
+      }, 75);
     })
   }
 
@@ -477,6 +509,7 @@ function Controller(){
       }
     }
     console.log("number of entries", data_to_server.length)
+    return data_to_server
   }
 
   async function fetchData(opts = { interrupt: false, onProgress: () => {} }){

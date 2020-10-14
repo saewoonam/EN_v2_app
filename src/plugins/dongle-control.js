@@ -364,7 +364,10 @@ function Controller(){
         // console.log(blockNumber, block);
         if (blockNumber !== blocksReceived) {
           stopNotifications()
-          reject(new OutOfOrderException())
+          setTimeout(async function() {
+            await sendCommand('stopDataDownload')
+            reject(new OutOfOrderException())
+          }, 75);
         }
         result.set(block, bytesReceived);
         bytesReceived += block.byteLength;
@@ -372,7 +375,11 @@ function Controller(){
         console.log(blocksReceived, bytesReceived, expectedLength);
         if (bytesReceived == expectedLength) {
           stopNotifications()
-          resolve(result);
+          setTimeout(async function() {
+            await sendCommand('stopDataDownload')
+            resolve(result);
+          }, 75);
+          // resolve(result);
         } else {
           ble.withPromises.writeWithoutResponse(
             connection.id,
@@ -384,36 +391,23 @@ function Controller(){
           })
         }
       }
-      /*  need to pause here, otheriwse startNotifications doesn't work */
-      setTimeout(async function() {
-        console.log("try to set up notification")
-        startNotifications(callback)
-      }, 75);
-      // setTimeout(async function() {
-      //   await sendCommand('startDataDownload')
-      // }, 75);
-      // setTimeout(async function() {
-      //   ble.withPromises.writeWithoutResponse(
-      //     connection.id,
-      //     SERVICE_UUID,
-      //     CHARACTERISTICS.data,
-      //     toBtValue(blocksReceived).buffer
-      //   ).catch(err => {
-      //     reject(err)
-      //   })
-      // }, 75);
-      /*  Also need to pause again, otherwise doesn't work */
-      setTimeout(async function() {
-        sendCommand('startDataDownload')
-          .then(ble.withPromises.writeWithoutResponse(
-            connection.id,
-            SERVICE_UUID,
-            CHARACTERISTICS.data,
-            toBtValue(blocksReceived).buffer
-          )).catch(err => {
-            reject(err)
-          })
-      }, 75);
+        /*  need to pause here, otheriwse startNotifications doesn't work */
+        setTimeout(async function() {
+          console.log("try to set up notification")
+          startNotifications(callback)
+        }, 75);
+        /*  Also need to pause again, otherwise doesn't work */
+        setTimeout(async function() {
+          sendCommand('startDataDownload')
+            .then(ble.withPromises.writeWithoutResponse(
+              connection.id,
+              SERVICE_UUID,
+              CHARACTERISTICS.data,
+              toBtValue(blocksReceived).buffer
+            )).catch(err => {
+              reject(err)
+            })
+        }, 75);
     })
   }
 
@@ -434,9 +428,9 @@ function Controller(){
       console.log("uploadData catch error", err);
       throw err
     } finally {
-      setTimeout(async function() {
-        await sendCommand('stopDataDownload')
-      }, 75);
+      // setTimeout(async function() {
+      //   await sendCommand('stopDataDownload')
+      // }, 75);
     }
     /* prep data for server, filter out marks and headers */
     let data_to_server = []

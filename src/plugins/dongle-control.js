@@ -350,10 +350,9 @@ function Controller(){
       )
   }
 
-  // async function timeoutPromise(interval, callback) {
+  // async function timeoutPromise(interval) {
   //   return new Promise(async function(resolve, reject) {
   //     setTimeout(function(){
-  //       startNotifications(callback)
   //       resolve("done");
   //     }, interval);
   //   });
@@ -378,10 +377,23 @@ function Controller(){
             reject(new OutOfOrderException())
           }, 75);
         }
+        if (opts.interrupt){
+          stopNotifications()
+          setTimeout(async function() {
+            await sendCommand('stopDataDownload')
+            console.log("fetch interrupted")
+            // reject("interrupted")
+            reject(new InterruptException())
+            // throw new InterruptException()
+          }, 75);
+        }
         result.set(block, bytesReceived);
         bytesReceived += block.byteLength;
         blocksReceived++;
         console.log(blocksReceived, bytesReceived, expectedLength);
+        if (opts.onProgress){
+          opts.onProgress(bytesReceived, expectedLength)
+        }
         if (bytesReceived == expectedLength) {
           stopNotifications()
           setTimeout(async function() {
@@ -396,7 +408,12 @@ function Controller(){
             CHARACTERISTICS.data,
             toBtValue(blocksReceived).buffer
           ).catch(err => {
-            reject(err)
+            console.log("catch error in write", err, opts.interrupt);
+            if (opts.interrupt) { // this is a hack to change err to interrupt
+              reject(new InterruptException())
+            } else {
+              reject(err)
+            }
           })
         }
       }
@@ -420,7 +437,7 @@ function Controller(){
     })
   }
 
-  async function uploadData() {
+  async function uploadData(opts = { interrupt: false, onProgress: () => {} }) {
     assertConnection()
     await sendCommand('startLastUpload')
     let start_mem = 0;
@@ -432,7 +449,7 @@ function Controller(){
     console.log("start", start_mem);
     let binary_data;
     try {
-      binary_data = await fetch( (stop_mem-start_mem)<<5)
+      binary_data = await fetch( (stop_mem-start_mem)<<5, opts)
     } catch (err) {
       console.log("uploadData catch error", err);
       throw err

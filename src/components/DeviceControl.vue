@@ -191,7 +191,6 @@ export default {
       // await this.checkFlashUsage()
       await this.getMemoryUsage()
       await this.getUptime()
-      // await this.$dongle.uploadData()
     },
 
     disconnect(){
@@ -329,10 +328,22 @@ export default {
 
     async upload() {
         try {
-            await this.$dongle.uploadData()
+            this._dataFetchInterrupt = {
+                interrupt: false,
+                onProgress: (received, expected) => {
+                    this.progress = received / expected * 100
+                }
+            }
+            await this.$dongle.uploadData(this._dataFetchInterrupt)
         } catch (err) {
-            console.log("vue error catch", err);
-            this.onError(err);
+            if (err instanceof InterruptException){
+                // no action
+            } else {
+                console.log("vue error catch", err);
+                this.onError(err)
+            }
+        } finally {
+            this.progress = 0
         }
     },
 

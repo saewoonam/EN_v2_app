@@ -280,26 +280,6 @@ export default {
     },
 
     recentData() {
-      // put recent data in a table here.
-      // this.encounterData = [{
-      //   encounterId: '034045-34-5-43-45--3465'
-      // }]
-
-      // this.encounterData = []
-      // let row = {}
-      // row.timestamp = "today"
-      // row.sound = "2.0"
-      // row.rssi = "-10.0"
-      // this.encounterData.push(row);
-
-      // this.encounterData = this.$dongle.recentData()
-
-      // try {
-      //   this.$dongle.recentData()
-      // } catch(e) {
-      //   this.onError(e)
-      // }
-      // this.encounterData = this.$dongle.getDataRecent()
       this.encounterData = []
       this.$dongle.recentData(this.encounterData)
         .catch(err => {
@@ -313,17 +293,6 @@ export default {
         this._dataFetchInterrupt.interrupt = true
       }
       this.progress = 0
-    },
-
-    async syncWithServer(){
-      let data = await this.fetchData()
-
-      if (!data){ return }
-
-      await this.sendDataToServer(data).catch(e => this.onError(e))
-      this.encounterData = data
-
-      this.feedback('Synched with server', 'is-success')
     },
 
     async upload() {
@@ -354,30 +323,6 @@ export default {
       this.feedback('Synched with server', 'is-success')
       // Send command to mark flash to device
       // this.$dongle.sendCommand('markFlashUpload')
-    },
-
-    async fetchData(){
-      this.cancelDataFetch()
-
-      try {
-        this._dataFetchInterrupt = {
-          interrupt: false,
-          onProgress: (received, expected) => {
-            this.progress = received / expected * 100
-          }
-        }
-
-        let data = await this.$dongle.fetchData(this._dataFetchInterrupt)
-        return bytesToData(data)
-      } catch (e){
-        if (e instanceof InterruptException){
-          // no action
-        } else {
-          this.onError(e)
-        }
-      } finally {
-        this.progress = 0
-      }
     },
 
     async sendDataToServer(data){

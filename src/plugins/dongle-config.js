@@ -52,10 +52,6 @@ export const COMMANDS = Object.freeze({
     value: 'f',
     returnType: Uint8Array
   },
-  startDataDownload: {
-    value: 'f',
-    returnType: Uint8Array
-  },
   stopDataDownload: {
     value: 'F',
     returnType: Uint8Array

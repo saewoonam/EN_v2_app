@@ -48,7 +48,7 @@ function Controller() {
 
   async function disconnect() {
     if (!connection) { return }
-    unsubscribe()
+    await unsubscribe()
     await ble.withPromises.disconnect(connection.id)
     connection = null
     pubsub.$emit('disconnected')
@@ -67,10 +67,10 @@ function Controller() {
 
       ble.connect(
         deviceId,
-        (c) => {
+        async (c) => {
           clearTimeout(timeout)
           connection = c
-          subscribe()
+          await subscribe()
           pubsub.$emit('connected', connection)
           resolve(c)
         },

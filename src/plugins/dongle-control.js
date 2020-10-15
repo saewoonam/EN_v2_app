@@ -329,7 +329,8 @@ function Controller() {
         ble.withPromises.writeWithoutResponse(
           connection.id,
           SERVICE_UUID,
-          CHARACTERISTICS.data_req,
+          // CHARACTERISTICS.data_req,
+          CHARACTERISTICS.data,
           toBtValue(blocksReceived).buffer
         ).catch(err => {
           reject(err)

@@ -1,5 +1,5 @@
 {
-  "name": "gov.nist.nistencal",
+  "name": "gov.nist.nistmetrics",
   "displayName": "v2",
   "version": "1.0.0",
   "description": "A sample Apache Cordova application that responds to the deviceready event.",

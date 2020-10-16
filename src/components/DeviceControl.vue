@@ -311,7 +311,7 @@ export default {
         }
         this.feedback('Synched with server', 'is-success')
         // Send command to mark flash to device
-        // this.$dongle.sendCommand('markFlashUpload')
+        if (data.length) this.$dongle.sendCommand('markFlashUpload')
 
       } catch (err) {
         if (err instanceof InterruptException){

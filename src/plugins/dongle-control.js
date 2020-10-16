@@ -72,6 +72,7 @@ function Controller() {
           connection = c
           await subscribe()
           pubsub.$emit('connected', connection)
+          console.log(c)
           resolve(c)
         },
         () => {
@@ -373,6 +374,7 @@ function Controller() {
         chunk = result.slice(offset, offset + 2 * blockSize);
         let dv = new DataView(chunk.buffer);
         let row = getDataFromView(dv)
+        row.name = connection.name
         encounters.push(row)
         offset += blockSize
       }

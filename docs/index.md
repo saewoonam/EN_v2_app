@@ -12,8 +12,10 @@ Data collection app for NIST bluetooth devices with ultrasonic ranging
 ## Screenshots
 
 ### example of first screen
-
 <img src="https://github.com/saewoonam/EN_v2_app/raw/master/docs/images/pg1.PNG" width=200>
+
+<img src = "https://raw.githubusercontent.com/saewoonam/EN_v2_app/master/docs/images/pg1.PNG" width=200>
+
 ![figure1](images/pg1.PNG?raw=true)
 
 ### example of second screen

@@ -52,6 +52,7 @@ function Controller() {
 
   function select(name) {
     console.log("select name: ", name)
+    pubsub.$emit('selected')
   }
 
   async function disconnect() {

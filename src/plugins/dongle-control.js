@@ -38,12 +38,20 @@ function Controller() {
   const pubsub = new Vue()
   let subscribed = false
   let connection = null
+  let selection = null
   let notifyCallback = noop
 
   function assertConnection() {
     if (!connection) {
       throw new Error('No connection established')
     }
+  }
+  function unselect() {
+    console.log("unselect")
+  }
+
+  function select(name) {
+    console.log("select name: ", name)
   }
 
   async function disconnect() {
@@ -386,6 +394,8 @@ function Controller() {
   return {
     connect,
     disconnect,
+    select,
+    unselect,
     getMemoryUsage,
     getBatteryLevel,
     sendCommand,
@@ -395,6 +405,7 @@ function Controller() {
     fetchRecentData,
     getDeviceName: () => sanitize(connection.name || ''),
     isConnected: () => !!connection,
+    isSelected: () => !!connection,
     on: pubsub.$on.bind(pubsub),
     off: pubsub.$off.bind(pubsub),
     once: pubsub.$once.bind(pubsub)

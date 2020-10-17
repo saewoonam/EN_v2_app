@@ -15,8 +15,8 @@
   </section>
 
   <template v-if="bluetoothEnabled">
-    <DeviceList v-if="!connected" @connect="connect" @error="onError"/>
-    <DeviceControl v-if="connected" @disconnect="disconnect"/>
+    <DeviceList v-if="!selected" @select="select" @error="onError"/>
+    <DeviceControl v-if="selected" @unselect="unselect"/>
   </template>
 </div>
 </template>
@@ -35,7 +35,7 @@ export default {
   },
   data: () => ({
     bluetoothEnabled: null,
-    connected: false,
+    selected: false,
     busy: false,
   }),
   watch: {
@@ -44,19 +44,20 @@ export default {
   },
 
   mounted(){
+    console.log("mounted in App.vue");
 
-    const connected = async () => {
-      this.connected = true
+    const selected = async () => {
+      this.selected = true
       this.busy = false
     }
-    const disconnected = () => {
-      this.connected = false
+    const unselected = () => {
+      this.selected = false
       this.busy = false
     }
-    this.$dongle.on('connected', connected)
-    this.$dongle.on('disconnected', disconnected)
-    this.connected = this.$dongle.isConnected()
-    if (this.connected){ connected() }
+    this.$dongle.on('selected', selected)
+    this.$dongle.on('unselected', unselected)
+    this.selected = this.$dongle.isSelected()
+    if (this.selected){ selected() }
 
     // monitor bluetooth enabled state
     const intr = setInterval(() => {
@@ -64,26 +65,28 @@ export default {
         this.bluetoothEnabled = true
       }, () => {
         this.bluetoothEnabled = false
-        this.connected = false
+        this.selected = false
       })
     }, 500)
 
     this.$on('hook:beforeDestroy', () => {
-      this.$dongle.off('connected', connected)
-      this.$dongle.off('disconnected', disconnected)
+      this.$dongle.off('selected', selected)
+      this.$dongle.off('unselected', unselected)
       clearInterval(intr)
     })
   },
 
   methods: {
 
-    async connect(id){
+    async select(id){
+      console.log("select in App.vue");
       this.busy = true
-      await this.$dongle.connect(id).catch(e => this.onError(e))
+      // await this.$dongle.select(id).catch(e => this.onError(e))
+      this.$dongle.select(id)
     },
 
-    async disconnect(){
-      await this.$dongle.disconnect().catch(e => this.onError(e))
+    async unselect(){
+      await this.$dongle.unselect().catch(e => this.onError(e))
     },
 
     onError(e){

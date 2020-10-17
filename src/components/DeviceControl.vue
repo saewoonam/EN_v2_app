@@ -21,7 +21,7 @@
             <b-button @click="fetchState" type="is-rounded is-inverted" icon-right="reload"></b-button>
           </div>
           <div class="control">
-            <b-button @click="disconnect" type="is-danger is-rounded" icon-right="power-plug-off"></b-button>
+            <b-button @click="unselect" type="is-danger is-rounded" icon-right="power-plug-off"></b-button>
           </div>
 
         </b-field>
@@ -166,22 +166,23 @@ export default {
 
   mounted(){
     console.log("in mounted device control");
-    const connected = async () => {
+    const selected = async () => {
       this.busy = true
       this.deviceName = this.$dongle.getDeviceName()
-      await this.fetchState()
+      console.log("deviceName", this.deviceName);
+      // await this.fetchState()
       this.busy = false
     }
-    const disconnected = () => {}
+    const unselected = () => {}
 
-    this.$dongle.on('connected', connected)
-    this.$dongle.on('disconnected', disconnected)
-    this.connected = this.$dongle.isConnected()
-    if (this.connected){ connected() }
+    this.$dongle.on('selected', selected)
+    this.$dongle.on('unselected', unselected)
+    this.selected = this.$dongle.isselected()
+    if (this.selected){ selected() }
 
     this.$on('hook:beforeDestroy', () => {
-      this.$dongle.off('connected', connected)
-      this.$dongle.off('disconnected', disconnected)
+      this.$dongle.off('selected', selected)
+      this.$dongle.off('unselected', unselected)
     })
   },
 
@@ -193,8 +194,8 @@ export default {
       await this.getUptime()
     },
 
-    disconnect(){
-      this.$emit('disconnect')
+    unselect(){
+      this.$emit('unselect')
     },
 
     feedback(msg, type = 'is-info'){

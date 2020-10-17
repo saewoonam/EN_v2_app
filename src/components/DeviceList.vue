@@ -4,7 +4,7 @@
     <div class="level-left">
       <div class="level-item">
         <div class="heading is-size-6">
-          NIST Bluetooth Ultrasound
+          Pick a NIST Device
         </div>
       </div>
     </div>
@@ -20,14 +20,14 @@
   </nav>
 
   <div class="container">
-    <div class="device-item clickable" v-for="d in devices" :key="d.id" @click="$emit('connect', d.id)">
+    <div class="device-item clickable" v-for="d in devices" :key="d.name" @click="$emit('select', d.name)">
       <div class="name heading is-size-6">
         {{ d.name || '(Anonymous)' }}
       </div>
       <div class="details field is-grouped is-grouped-multiline">
-        <div class="control">
-          <span class="tag is-dark">{{ d.id }}</span>
-        </div>
+        <!-- <div class="control"> -->
+        <!--   <span class="tag is&#45;dark">{{ d.id }}</span> -->
+        <!-- </div> -->
 
         <div class="control">
           <div class="tags has-addons">

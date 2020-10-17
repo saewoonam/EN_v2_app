@@ -10,8 +10,11 @@ Data collection app for NIST bluetooth devices with ultrasonic ranging
 ## for support contact SaeWoo Nam via email:  nams@nist.gov
 
 ## Screenshots
+
 ### example of first screen
-![figure1](images/pg1.PNG?raw=true | width=100)
+
+<img src="https://github.com/saewoonam/EN_v2_app/raw/master/docs/images/pg1.PNG" width=100>
+![figure1](images/pg1.PNG?raw=true)
 ### example of second screen
 ![figure2](images/pg2.PNG?raw=true)
 ### example of upload

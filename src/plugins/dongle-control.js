@@ -52,8 +52,30 @@ function Controller() {
   }
 
   function select(name) {
-    console.log("select name: ", name)
+    selection = name
+    console.log("select this.selection: ", selection)
     pubsub.$emit('selected')
+  }
+
+  async function discover(name) {
+    return new Promise((resolve, reject) => {
+      let timeout = setTimeout(() => {
+        ble.stopScan()
+        reject(new Error('discover scan timeout'))
+      }, 5*COMMAND_TIMEOUT)
+      let error = function () {
+        reject(new Error("discover failed to startScan"))
+      }
+      let discover = function(device) {
+        if (device.name == selection) {
+          console.log("match")
+          clearTimeout(timeout)
+          ble.stopScan()
+          resolve(device)
+        }
+      }
+      ble.startScan(['7b183224-9168-443e-a927-7aeea07e8105'], discover, error);
+    })
   }
 
   async function disconnect() {
@@ -61,6 +83,7 @@ function Controller() {
     await unsubscribe()
     await ble.withPromises.disconnect(connection.id)
     connection = null
+    console.log("Disconnected")
     pubsub.$emit('disconnected')
   }
 
@@ -82,7 +105,7 @@ function Controller() {
           connection = c
           await subscribe()
           pubsub.$emit('connected', connection)
-          console.log(c)
+          console.log('connect', c)
           resolve(c)
         },
         () => {
@@ -177,6 +200,7 @@ function Controller() {
       }, COMMAND_TIMEOUT)
 
       function done(res) {
+        console.log("clear timeout")
         clearTimeout(timeout)
         notifyCallback = noop
 
@@ -396,6 +420,7 @@ function Controller() {
   return {
     connect,
     disconnect,
+    discover,
     select,
     unselect,
     getMemoryUsage,
@@ -405,9 +430,10 @@ function Controller() {
     syncClock,
     fetchData,
     fetchRecentData,
-    getDeviceName: () => sanitize(connection.name || ''),
+    // getDeviceName: () => sanitize(connection.name || ''),
+    getDeviceName: () => sanitize(selection || ''),
     isConnected: () => !!connection,
-    isSelected: () => !!connection,
+    isSelected: () => !!selection,
     on: pubsub.$on.bind(pubsub),
     off: pubsub.$off.bind(pubsub),
     once: pubsub.$once.bind(pubsub)

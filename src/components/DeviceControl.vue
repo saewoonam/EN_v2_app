@@ -188,10 +188,20 @@ export default {
 
   methods: {
     async fetchState(){
+      this.busy=true
+      let connected = false
+      do {
+        let device = await this.$dongle.discover(this.deviceName)
+        console.log("fetchState device", device)
+        await this.$dongle.connect(device.id)
+          .then(_=>{connected=true})
+          .catch(_=>{connected=false})
+      } while (!connected)
       await this.checkBattery()
-      // await this.checkFlashUsage()
       await this.getMemoryUsage()
       await this.getUptime()
+      await this.$dongle.disconnect()
+      this.busy=false
     },
 
     unselect(){

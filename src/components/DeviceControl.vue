@@ -177,7 +177,7 @@ export default {
 
     this.$dongle.on('selected', selected)
     this.$dongle.on('unselected', unselected)
-    this.selected = this.$dongle.isselected()
+    this.selected = this.$dongle.isSelected()
     if (this.selected){ selected() }
 
     this.$on('hook:beforeDestroy', () => {

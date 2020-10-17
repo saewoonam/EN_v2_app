@@ -48,6 +48,7 @@ function Controller() {
   }
   function unselect() {
     console.log("unselect")
+    pubsub.$emit('unselected')
   }
 
   function select(name) {

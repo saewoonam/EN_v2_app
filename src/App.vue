@@ -86,7 +86,8 @@ export default {
     },
 
     async unselect(){
-      await this.$dongle.unselect().catch(e => this.onError(e))
+      // await this.$dongle.unselect().catch(e => this.onError(e))
+      this.$dongle.unselect()
     },
 
     onError(e){

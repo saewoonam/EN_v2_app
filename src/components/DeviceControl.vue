@@ -16,6 +16,9 @@
           <!-- <div class="control"> -->
           <!--   <img src="../static/head&#45;outline.svg"> -->
           <!-- </div> -->
+          <div class="control write">
+            <b-icon :icon="writeIcon" />
+          </div>
           <div class="control battery">
             <b-icon :icon="batteryIcon" :type="batteryColor" />
           </div>
@@ -87,6 +90,9 @@
   .level {
     margin: 0;
   }
+  .write {
+    padding-top: 7px;
+  }
   .battery {
     padding-top: 7px;
   }
@@ -150,6 +156,13 @@ export default {
   watch: {
   },
   computed: {
+    writeIcon(){
+      if (this.status & 0x01) {
+        return "pencil-outline"
+      } else {
+        return ""
+      }
+    },
     batteryIcon(){
       let v = Math.floor(this.batteryLevel / 10) * 10
       if (v === 100){ return 'battery' }
@@ -311,6 +324,12 @@ export default {
     },
 
     async recentData() {
+      this.busy=true
+      await this.connect()
+        .catch(err => {
+          console.log("Error in connect", err);
+          this.onError(err)
+        })
       try {
         this.encounterData = await this.$dongle.fetchRecentData()
         if (!this.encounterData.length){
@@ -319,6 +338,8 @@ export default {
       } catch (err){
         this.onError(err)
       }
+      await this.disconnect()
+      this.busy=false
     },
 
     cancelDataFetch(){
@@ -330,6 +351,13 @@ export default {
 
     async getEncounters() {
       try {
+        this.busy=true
+        await this.connect()
+          .catch(err => {
+            console.log("Error in connect", err);
+            this.onError(err)
+          })
+        this.busy=false
         this._dataFetchInterrupt = {
           interrupt: false,
           onProgress: (received, expected) => {
@@ -352,11 +380,12 @@ export default {
         }
       } finally {
         this.progress = 0
+        await this.disconnect()
       }
     },
 
     async sendDataToServer(data){
-      // this.progress = 1
+      this.progress = 1
       console.log("sendDataToServer")
       let encounters = data.map(d => {
         return {

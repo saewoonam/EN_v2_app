@@ -13,7 +13,9 @@
     <div class="level-right">
       <div class="level-item has-text-right">
         <b-field grouped position="is-right">
-
+          <div class="control">
+            <img src="../static/head-outline.svg">
+          </div>
           <div class="control battery">
             <b-icon :icon="batteryIcon" :type="batteryColor" />
           </div>
@@ -238,6 +240,7 @@ export default {
     getMemoryUsage(){
       return this.$dongle.getMemoryUsage().then(usage => {
         this.blockCount = usage[0]
+        console.log("this.status", this.status)
         this.status = usage[1] >> 8
       })
       .catch(err => this.onError(err))

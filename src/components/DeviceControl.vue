@@ -13,9 +13,9 @@
     <div class="level-right">
       <div class="level-item has-text-right">
         <b-field grouped position="is-right">
-          <div class="control">
-            <img src="../static/head-outline.svg">
-          </div>
+          <!-- <div class="control"> -->
+          <!--   <img src="../static/head&#45;outline.svg"> -->
+          <!-- </div> -->
           <div class="control battery">
             <b-icon :icon="batteryIcon" :type="batteryColor" />
           </div>
@@ -217,6 +217,11 @@ export default {
       await this.checkBattery()
       await this.getMemoryUsage()
       await this.getUptime()
+      if ((this.status & (1<<2)) == 4) {
+        console.log("try to set sync clock")
+        await this.$dongle.syncClock(this.uptime)
+            .catch(err => this.onError(err))
+        }
       await this.disconnect()
       this.busy=false
     },
@@ -240,8 +245,8 @@ export default {
     getMemoryUsage(){
       return this.$dongle.getMemoryUsage().then(usage => {
         this.blockCount = usage[0]
-        console.log("this.status", this.status)
         this.status = usage[1] >> 8
+        console.log("this.status", this.status)
       })
       .catch(err => this.onError(err))
     },
@@ -257,9 +262,6 @@ export default {
     getUptime(){
       return this.$dongle.sendCommand('getUptime').then((used) => {
         this.uptime = [used[0], used[1]]
-        if ((this.status & (1<<2)) == 4) {
-          this.$dongle.syncClock(this.uptime)
-        }
 
       })
       .catch(err => this.onError(err))

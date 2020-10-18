@@ -187,20 +187,35 @@ export default {
   },
 
   methods: {
-    async fetchState(){
-      this.busy=true
+    async connect() {
       let connected = false
       do {
         let device = await this.$dongle.discover(this.deviceName)
         console.log("fetchState device", device)
         await this.$dongle.connect(device.id)
           .then(_=>{connected=true})
-          .catch(_=>{connected=false})
+          .catch(err =>{
+            console.log("connect error: ", err)
+            connected=false
+          })
       } while (!connected)
+    },
+
+    async disconnect() {
+      await this.$dongle.disconnect()
+    },
+
+    async fetchState(){
+      this.busy=true
+      await this.connect()
+        .catch(err => {
+          console.log("Error in connect", err);
+          this.onError(err)
+        })
       await this.checkBattery()
       await this.getMemoryUsage()
       await this.getUptime()
-      await this.$dongle.disconnect()
+      await this.disconnect()
       this.busy=false
     },
 

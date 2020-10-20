@@ -255,7 +255,7 @@ export function checkForMarkOrHeader(raw, offset=4) {
 
 export function raw2row(raw) {
     let parsed = rawRecentToData(raw)
-    let iqr_threshold = 100;
+    let iqr_threshold = 180;
     let row = {}
     row.timestamp = new Date(parsed.minute * 60 * 1000).toLocaleString();
     // remove secoonds from ascii time

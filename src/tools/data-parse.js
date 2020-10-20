@@ -159,6 +159,7 @@ export function getDataFromView(arrayView) {
   timestamp = timestamp[0]
 
   let encounterId = data2hex(parsed.public_key)
+  parsed.mac = data2hex(parsed.mac)
 
   return {
     ...parsed,

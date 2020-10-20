@@ -57,18 +57,37 @@ function Controller() {
     pubsub.$emit('selected')
   }
 
+  function trim(name) {
+    if (name.length==8) {
+      name = name.slice(-4)
+    }
+    if (name == '-GEN') {
+      name = 'test'
+    }
+    return name
+  }
+
+  function match(name, found) {
+    console.log('match in:', name, found)
+    found = trim(found)
+    let number = trim(name)
+    console.log('match test:', number, found)
+    return number==found
+  }
+
   async function discover(name) {
     return new Promise((resolve, reject) => {
       let timeout = setTimeout(() => {
         ble.stopScan()
         reject(new Error('discover scan timeout'))
-      }, 5*COMMAND_TIMEOUT)
+      }, 2 * COMMAND_TIMEOUT)
       let error = function () {
         reject(new Error("discover failed to startScan"))
       }
       let discover = function(device) {
-        if (device.name == selection) {
-          console.log("match")
+        console.log("scan found: ", device.name, selection, device.name==selection)
+        if (match(selection, device.name)) {
+          console.log("match found")
           clearTimeout(timeout)
           ble.stopScan()
           resolve(device)

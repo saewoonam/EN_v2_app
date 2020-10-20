@@ -19,6 +19,9 @@
           <div class="control write">
             <b-icon :icon="writeIcon" />
           </div>
+          <div class="control memory">
+            <b-icon :icon="memoryIcon" />
+          </div>
           <div class="control battery">
             <b-icon :icon="batteryIcon" :type="batteryColor" />
           </div>
@@ -93,6 +96,9 @@
   .write {
     padding-top: 7px;
   }
+  .memory {
+    padding-top: 7px;
+  }
   .battery {
     padding-top: 7px;
   }
@@ -121,7 +127,9 @@ import { bytesToData, bytesToCsv, parse_binary } from '../tools/data-parse'
 import { InterruptException } from '../plugins/dongle-control'
 import EncounterTable from './EncounterTable'
 
-const SERVER_SYNC_URL = 'http://68.183.130.247:8000/api/encounters/debug'
+var SERVER_ADDRESS = '192.168.0.210'
+// var SERVER_ADDRESS = '68.183.130.247'
+const SERVER_SYNC_URL = 'http://'+SERVER_ADDRESS+':8000/api/encounters/debug'
 
 function msToTime(s) {
   let ms = s % 1000
@@ -163,6 +171,19 @@ export default {
         return ""
       }
     },
+    memoryIcon(){
+      let f = this.blockCount / 32768;
+      if (f==0) return ""
+      if (f<0.25) {
+        return "gauge-empty"
+      } else if (f<0.5) {
+        return "gauge-low"
+      } else if (f<0.75) {
+        return "gauge" 
+      } else{
+        return "gauge-full"
+      }
+    },
     batteryIcon(){
       let v = Math.floor(this.batteryLevel / 10) * 10
       if (v === 100){ return 'battery' }
@@ -185,7 +206,7 @@ export default {
       this.busy = true
       this.deviceName = this.$dongle.getDeviceName()
       console.log("deviceName", this.deviceName);
-      // await this.fetchState()
+      await this.fetchState()
       this.busy = false
     }
     const unselected = () => {}
@@ -206,7 +227,6 @@ export default {
       let connected = false
       do {
         let device = await this.$dongle.discover(this.deviceName)
-        console.log("fetchState device", device)
         await this.$dongle.connect(device.id)
           .then(_=>{connected=true})
           .catch(err =>{
@@ -411,6 +431,7 @@ export default {
             method: 'POST',
             headers: {
               'Content-Type': 'application/json',
+              'origin': '',
             },
             body: JSON.stringify({ encounters: batch })
           }).catch(e => console.log("fetch error", e))

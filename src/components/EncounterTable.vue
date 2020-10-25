@@ -5,7 +5,7 @@
       {{ props.row.timestamp }}
     </b-table-column>
 
-    <b-table-column field="sound" label="sound[m]" centered v-slot="props">
+    <b-table-column field="sound" label="sound[m]" centered v-slot="props" width='80'>
       <span :class="props.row.sound < 2 ? 'tag is-danger':''">
         {{ props.row.sound }}
       </span>

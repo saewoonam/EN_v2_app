@@ -20,8 +20,10 @@
     "@vue/devtools": "^5.3.3",
     "babel-loader": "^8.1.0",
     "cordova-android": "^9.0.0",
+    "cordova-browser": "^6.0.0",
     "cordova-ios": "^6.1.1",
     "cordova-plugin-ble-central": "git+https://github.com/rajeshpandalss/cordova-plugin-ble-central.git",
+    "cordova-plugin-device": "^2.0.3",
     "cordova-plugin-whitelist": "^1.3.4",
     "css-loader": "^4.3.0",
     "file-loader": "^6.1.1",
@@ -38,13 +40,15 @@
     "plugins": {
       "cordova-plugin-whitelist": {},
       "cordova-plugin-ble-central": {
-        "BLUETOOTH_USAGE_DESCRIPTION": " "
+        "BLUETOOTH_USAGE_DESCRIPTION": "Bluetooth permission is required to communicate with the bluetooth peripheral that this app controls"
       },
-      "cordova-plugin-webpack": {}
+      "cordova-plugin-webpack": {},
+      "cordova-plugin-device": {}
     },
     "platforms": [
       "ios",
-      "android"
+      "android",
+      "browser"
     ]
   },
   "dependencies": {

@@ -5,7 +5,8 @@
   <nav class="level is-mobile">
     <div class="level-left">
       <div class="level-item">
-        <div class="heading is-size-6">
+        <!-- <div class="heading is&#45;size&#45;6"> -->
+        <div class="title is-size-8">
           {{ deviceName || '(Anonymous)' }}
         </div>
       </div>
@@ -38,31 +39,31 @@
   </nav>
 
   <div class="inner">
-    <b-field grouped group-multiline class="block">
-      <div class="control">
-        <b-taglist attached>
-          <b-tag type="is-dark">
-            <b-icon icon="timer" size="is-small" />
-          </b-tag> <b-tag type="is-info">{{ uptimeText }}</b-tag>
-        </b-taglist>
-      </div>
-      <div class="control">
-        <b-taglist attached>
-          <b-tag type="is-dark">
-            mem
-          </b-tag>
-          <b-tag type="is-info">{{ blockCount }}</b-tag>
-        </b-taglist>
-      </div>
-    </b-field>
+    <!-- <b&#45;field grouped group&#45;multiline class="block"> -->
+    <!--   <div class="control"> -->
+    <!--     <b&#45;taglist attached> -->
+    <!--       <b&#45;tag type="is&#45;dark"> -->
+    <!--         <b&#45;icon icon="timer" size="is&#45;small" /> -->
+    <!--       </b&#45;tag> <b&#45;tag type="is&#45;info">{{ uptimeText }}</b&#45;tag> -->
+    <!--     </b&#45;taglist> -->
+    <!--   </div> -->
+    <!--   <div class="control"> -->
+    <!--     <b&#45;taglist attached> -->
+    <!--       <b&#45;tag type="is&#45;dark"> -->
+    <!--         mem -->
+    <!--       </b&#45;tag> -->
+    <!--       <b&#45;tag type="is&#45;info">{{ blockCount }}</b&#45;tag> -->
+    <!--     </b&#45;taglist> -->
+    <!--   </div> -->
+    <!-- </b&#45;field> -->
 
     <b-progress v-if="progress > 0" :value="progress"></b-progress>
 
     <b-field grouped position="is-centered" class="block">
       <div class="control">
-        <b-button size="is-medium" @click="getEncounters" v-if="progress === 0">Upload</b-button>
+        <b-button rounded type="is-primary" size="is-medium" @click="getEncounters" v-if="progress === 0">Upload</b-button>
         <!-- <b&#45;button size="is&#45;medium" @click="syncWithServer" v&#45;if="progress === 0">Upload</b&#45;button> -->
-        <b-button size="is-medium" type="is-danger" @click="cancelDataFetch" v-else>
+        <b-button rounded size="is-medium" type="is-danger" @click="cancelDataFetch" v-else>
           <b-icon
             icon="sync"
             custom-class="mdi-spin">
@@ -71,7 +72,7 @@
         </b-button>
       </div>
       <div class="control">
-        <b-button size="is-medium" @click="recentData" :disabled="progress > 0">View recent</b-button>
+        <b-button rounded size="is-info is-medium" @click="recentData" :disabled="progress > 0">View recent</b-button>
       </div>
       <!-- <div class="control">
         <b-button size="is-medium" :type="flashWrite ? 'is-warning' : 'is-info'" @click="toggleFlash">{{ flashWrite ? 'Stop Recording' : 'Start Recording' }}</b-button>

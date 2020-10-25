@@ -275,7 +275,7 @@ export function raw2row(raw) {
       row.sound -= 50;
       row.sound *= 192 / 19e6 *
         343;
-      row.sound = row.sound.toFixed(2);
+      row.sound = row.sound.toFixed(1);
     }
 
     let rssi = parsed.rssi_values
